@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="label_version_number">Version Number</string>
+    <string name="label_build_date">Build Date</string>
+
+    <string name="app_name">GMS Callback Sample</string>
+    <string name="title_activity_chat">Genesys Chat</string>
+    <string name="title_activity_genesys_sample">Genesys Sample</string>
+    <string name="title_activity_log">Log</string>
+    <string name="action_clear_log">Clear</string>
+
+</resources>

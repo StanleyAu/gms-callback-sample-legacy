@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="Genesys Callback" >
+
+    <EditTextPreference
+        android:key="first_name"
+        android:defaultValue="John"
+        android:title="First name" />
+    <EditTextPreference
+        android:key="last_name"
+        android:defaultValue="Doe"
+        android:title="Last name" />
+    <EditTextPreference
+        android:inputType="textNoSuggestions"
+        android:key="gms_user"
+        android:singleLine="true"
+        android:title="Username" />
+    <EditTextPreference
+        android:key="chat_display_name"
+        android:defaultValue="John"
+        android:title="Display name" />
+    <EditTextPreference
+        android:key="chat_email"
+        android:defaultValue="john.doe@test.com"
+        android:title="Email" />
+    <EditTextPreference
+        android:key="chat_subject"
+        android:defaultValue="Genesys Mobile Services Demo"
+        android:title="Subject" />
+    <ListPreference
+        android:key="scenario"
+        android:title="Scenario"
+        android:dialogTitle="Choose scenario"
+        android:entries="@array/scenarios"
+        android:entryValues="@array/scenarios"
+        android:defaultValue="VOICE-WAIT-USERORIG"/>
+    <com.genesys.gms.mobile.callback.demo.legacy.widgets.DateTimePreference
+        android:key="desired_time"
+        android:title="Desired time"
+        android:dialogTitle="Select a time"
+        android:summary="Tap to select"
+        android:enabled="false"/>
+    <ListPreference
+        android:key="selected_time"
+        android:title="Available time slots"
+        android:entries="@array/empty"
+       	android:entryValues="@array/empty"
+        android:dialogTitle="Choose time slot"
+        android:summary="Select desired time above"
+        android:enabled="false"/>
+</PreferenceScreen>

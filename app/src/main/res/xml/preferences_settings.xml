@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="Genesys Sample Settings" >
+        <EditTextPreference
+            android:defaultValue="http://"
+            android:inputType="textNoSuggestions"
+            android:key="server_url"
+            android:singleLine="true"
+            android:title="Server URL" />
+        <EditTextPreference
+            android:inputType="textNoSuggestions"
+            android:defaultValue="/genesys/1/service/"
+            android:key="url_path"
+            android:singleLine="true"
+            android:title="URL path" />
+        <EditTextPreference
+            android:defaultValue="gmstester-callback"
+            android:inputType="textNoSuggestions"
+            android:key="service_name"
+            android:singleLine="true"
+            android:title="Service name" />
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="provide_code"
+            android:title="Request code" />
+        <EditTextPreference
+            android:defaultValue=""
+            android:inputType="phone"
+            android:key="this_phone_number"
+            android:singleLine="true"
+            android:title="My phone number" />
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="push_notifications_enabled"
+            android:title="Push notifications" />
+        <EditTextPreference
+            android:defaultValue=""
+            android:inputType="textUri"
+            android:key="gcm_sender_id"
+            android:singleLine="true"
+            android:title="GCM sender id" />
+</PreferenceScreen>

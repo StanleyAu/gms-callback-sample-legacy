@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="scenarios">
+        <item>VOICE-NOW-USERORIG</item>
+        <item>VOICE-WAIT-USERORIG</item>
+        <item>VOICE-NOW-USERTERM</item>
+        <item>VOICE-WAIT-USERTERM</item>
+        <item>VOICE-SCHEDULED-USERTERM</item>
+        <item>CHAT-NOW</item>
+        <item>CHAT-WAIT</item>
+        <item>CUSTOM</item>
+    </array>
+    <array name="empty">
+    </array>
+</resources>
