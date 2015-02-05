@@ -35,7 +35,7 @@ public class CallbackServiceManager {
         Map<String, String> params = new HashMap<String, String>();
         params.put("_customer_number", event._customer_number);
         if(event._desired_time != null) {
-            params.put("_desired_time", TimeHelper.serializeUTCTime(event._desired_time));
+            params.put("_desired_time", event._desired_time);
         }
         params.put("_callback_state", event._callback_state);
         params.put("_urs_virtual_queue", event._urs_virtual_queue);
@@ -44,10 +44,10 @@ public class CallbackServiceManager {
             params.putAll(event.properties);
         }
 
-        callbackService.startCallback(event.serviceName, params, new Callback<CallbackConfirmationDialog>() {
+        callbackService.startCallback(event.serviceName, params, new Callback<CallbackDialog>() {
             @Override
-            public void success(CallbackConfirmationDialog callbackConfirmationDialog, Response response) {
-                bus.post(new CallbackStartDoneEvent(callbackConfirmationDialog));
+            public void success(CallbackDialog callbackDialog, Response response) {
+                bus.post(new CallbackStartDoneEvent(callbackDialog));
             }
 
             @Override

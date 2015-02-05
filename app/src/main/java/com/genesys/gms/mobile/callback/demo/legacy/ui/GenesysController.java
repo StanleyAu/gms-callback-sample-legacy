@@ -1,17 +1,18 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import android.preference.ListPreference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackDialog;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.CallbackStartEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
+import de.greenrobot.event.EventBus;
+import hugo.weaving.DebugLog;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 import org.joda.time.*;
@@ -38,7 +39,9 @@ import android.widget.Toast;
 public class GenesysController {
 
 	private final Logger log = LoggerFactory.getLogger(Globals.GENESYS_LOG_TAG);
+    private final Context context;
 	private final GenesysService genesysService;
+    private final EventBus bus;
 
 	// TODO: Move code to utility class
 	final private static String ISO8601_FORMAT = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'SSS'Z'";
@@ -46,72 +49,110 @@ public class GenesysController {
 	
 	private String sessionId;
 
-	public GenesysController(GenesysService genesysService) {
+    @DebugLog
+	public GenesysController(Context context, GenesysService genesysService, EventBus bus) {
 		//this.sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        //The GenesysService is literally only used for HTTP, must be deprecated
+        this.context = context;
 		this.genesysService = genesysService;
+        this.bus = bus;
 	}
 
 	public void connect(Context context) {
-		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-		String serverUrl = sharedPreferences.getString("server_url", null);
-		String urlPath = sharedPreferences.getString("url_path", null);
-		String serviceName = sharedPreferences.getString("service_name", null);
-		String gmsUser = sharedPreferences.getString("gms_user", null);
-		
-		List<NameValuePair> params = new ArrayList<NameValuePair>();
-		params.add(new BasicNameValuePair("first_name", sharedPreferences.getString("first_name", null)));
-		params.add(new BasicNameValuePair("last_name", sharedPreferences.getString("last_name", null)));
-		params.add(new BasicNameValuePair("_provide_code", Boolean.toString(sharedPreferences.getBoolean("provide_code", false))));
-		params.add(new BasicNameValuePair("_customer_number", sharedPreferences.getString("this_phone_number", null)));
-		
-		boolean registerCloudMessaging = sharedPreferences.getBoolean("push_notifications_enabled", false);
-		boolean useCallbackInterface = true;
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        Map<String, String> params = new HashMap<String, String>();
+        String strDesiredTime = null;
+        CallbackStartEvent event = null;
 
-		String scenario = sharedPreferences.getString("scenario", null);
-		if (scenario.equals("VOICE-NOW-USERORIG")) {
-			params.add(new BasicNameValuePair("_call_direction", "USERORIGINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "false"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "false"));
-			params.add(new BasicNameValuePair("_media_type", "voice"));
-		} else if (scenario.equals("VOICE-WAIT-USERORIG")) {
-			params.add(new BasicNameValuePair("_call_direction", "USERORIGINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "true"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "true"));
-			params.add(new BasicNameValuePair("_media_type", "voice"));
-		} else if (scenario.equals("VOICE-NOW-USERTERM")) {
-			params.add(new BasicNameValuePair("_call_direction", "USERTERMINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "false"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "false"));
-			params.add(new BasicNameValuePair("_media_type", "voice"));
-		} else if (scenario.equals("VOICE-WAIT-USERTERM")) {
-			params.add(new BasicNameValuePair("_call_direction", "USERTERMINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "true"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "true"));
-			params.add(new BasicNameValuePair("_media_type", "voice"));
-		} else if (scenario.equals("VOICE-SCHEDULED-USERTERM")) {
-			//useCallbackInterface = true;
-			params.add(new BasicNameValuePair("_call_direction", "USERTERMINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "true"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "true"));
-			params.add(new BasicNameValuePair("_media_type", "voice"));
-			
-			String desiredTime = sharedPreferences.getString("selected_time", null);
-			params.add(new BasicNameValuePair("_desired_time", desiredTime));
-		} else if (scenario.equals("CHAT-NOW")) {
-			params.add(new BasicNameValuePair("_call_direction", "USERORIGINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "false"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "false"));
-			params.add(new BasicNameValuePair("_media_type", "chat"));
-		} else if (scenario.equals("CHAT-WAIT")) {
-			params.add(new BasicNameValuePair("_call_direction", "USERORIGINATED"));
-			params.add(new BasicNameValuePair("_wait_for_agent", "true"));
-			params.add(new BasicNameValuePair("_wait_for_user_confirm", "true"));
-			params.add(new BasicNameValuePair("_media_type", "chat"));
-		} else { // CUSTOM
-		}
+        params.put("first_name", sharedPreferences.getString("first_name", null));
+        params.put("last_name", sharedPreferences.getString("last_name", null));
+        params.put("_provide_code", Boolean.toString(sharedPreferences.getBoolean("provide_code", false)));
+        params.put("_customer_number", sharedPreferences.getString("this_phone_number", null));
+
+        // We've already confirmed that GCM is registered if needed
+        boolean registerCloudMessaging = sharedPreferences.getBoolean("push_notifications_enabled", false);
+        if (registerCloudMessaging) {
+            params.put("_device_notification_id", sharedPreferences.getString(GcmManager.PROPERTY_REG_ID, null));
+            params.put("_device_os", "gcm");
+        }
+
+        String scenario = sharedPreferences.getString("scenario", null);
+        if (scenario.equals("VOICE-NOW-USERORIG")) {
+            params.put("_call_direction", "USERORIGINATED");
+            params.put("_wait_for_agent", "false");
+            params.put("_wait_for_user_confirm", "false");
+            params.put("_media_type", "voice");
+        } else if (scenario.equals("VOICE-WAIT-USERORIG")) {
+            params.put("_call_direction", "USERORIGINATED");
+            params.put("_wait_for_agent", "true");
+            params.put("_wait_for_user_confirm", "true");
+            params.put("_media_type", "voice");
+        } else if (scenario.equals("VOICE-NOW-USERTERM")) {
+            params.put("_call_direction", "USERTERMINATED");
+            params.put("_wait_for_agent", "false");
+            params.put("_wait_for_user_confirm", "false");
+            params.put("_media_type", "voice");
+        } else if (scenario.equals("VOICE-WAIT-USERTERM")) {
+            params.put("_call_direction", "USERTERMINATED");
+            params.put("_wait_for_agent", "true");
+            params.put("_wait_for_user_confirm", "true");
+            params.put("_media_type", "voice");
+        } else if (scenario.equals("VOICE-SCHEDULED-USERTERM")) {
+            params.put("_call_direction", "USERTERMINATED");
+            strDesiredTime = sharedPreferences.getString("selected_time", null);
+            params.put("_wait_for_agent", "true");
+            params.put("_wait_for_user_confirm", "true");
+            params.put("_media_type", "voice");
+        } else if (scenario.equals("CHAT-NOW")) {
+            params.put("_call_direction", "USERORIGINATED");
+            params.put("_wait_for_agent", "false");
+            params.put("_wait_for_user_confirm", "false");
+            params.put("_media_type", "chat");
+        } else if (scenario.equals("CHAT-WAIT")) {
+            params.put("_call_direction", "USERORIGINATED");
+            params.put("_wait_for_agent", "true");
+            params.put("_wait_for_user_confirm", "true");
+            params.put("_media_type", "chat");
+        } else { // CUSTOM
+        }
+
+        bus.post(new CallbackStartEvent(
+            sharedPreferences.getString("service_name", null),
+            sharedPreferences.getString("_customer_number", null),
+            strDesiredTime,
+            null, // _callback_state
+            null, // _urs_virtual_queue
+            null, // _request_queue_time_stat
+            params
+        ));
+
+        /*
+        blah blah blah
 		
 		genesysService.startSession(serverUrl, urlPath, serviceName, gmsUser, params, registerCloudMessaging, useCallbackInterface);
+		*/
 	}
+
+    public void handleDialog(CallbackDialog dialog) {
+        CallbackDialog myDialog = (CallbackDialog) dialog;
+        switch(myDialog.getAction()) {
+            case DIAL:
+                String telUri = dialog.getTelUrl();
+                String label = dialog.getLabel();
+                Toast.makeText(context, label, Toast.LENGTH_SHORT).show();
+                makeCall(context, Uri.parse(telUri));
+                break;
+            case MENU:
+                break;
+            case CHAT:
+                break;
+            case CONFIRM:
+                String text = dialog.getText();
+                Toast.makeText(context, text, Toast.LENGTH_LONG).show();
+                break;
+            default:
+        }
+    }
 
 	public void handleIntent(Context context, Intent intent) {		
 		boolean isErrorMessage = Globals.ACTION_GENESYS_ERROR_MESSAGE.equals(intent.getAction());

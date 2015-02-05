@@ -1,7 +1,7 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackAdminRequest;
-import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackConfirmationDialog;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackDialog;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackRequest;
 import org.joda.time.DateTime;
 import retrofit.Callback;
@@ -16,13 +16,13 @@ import java.util.Map;
  */
 public interface CallbackService {
     @POST("/service/callback/{service_name}")
-    public CallbackConfirmationDialog startCallback(@Path("service_name") String serviceName,
+    public CallbackDialog startCallback(@Path("service_name") String serviceName,
                                                     @Body Map<String, String> params);
 
     @POST("/service/callback/{service_name}")
     public void startCallback(@Path("service_name") String serviceName,
                                                     @Body Map<String, String> params,
-                                                    Callback<CallbackConfirmationDialog> callback);
+                                                    Callback<CallbackDialog> callback);
 
     @DELETE("/service/callback/{service_name}/{service_id}")
     public Response cancelCallback(@Path("service_name") String serviceName,

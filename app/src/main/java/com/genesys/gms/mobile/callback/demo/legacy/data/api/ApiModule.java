@@ -25,12 +25,18 @@ public class ApiModule {
     @Provides @Singleton
     GmsEndpoint provideEndpoint(SharedPreferences sharedPreferences) {
         GmsEndpoint gmsEndpoint = new GmsEndpoint();
-        String host = sharedPreferences.getString(Globals.PROPERTY_HOST, "");
+        String host = sharedPreferences.getString(Globals.PROPERTY_HOST, "localhost");
         String strPort = sharedPreferences.getString(Globals.PROPERTY_PORT, "8080");
         String strApiVersion = sharedPreferences.getString(Globals.PROPERTY_API_VERSION, "1");
         if(!host.isEmpty() && !strPort.isEmpty() && !strApiVersion.isEmpty()) {
-            int port = Integer.parseInt(strPort);
-            int apiVersion = Integer.parseInt(strApiVersion);
+            Integer port = null;
+            Integer apiVersion = null;
+            try {
+                port = Integer.valueOf(strPort);
+                apiVersion = Integer.valueOf(strApiVersion);
+            } catch (NumberFormatException e) {
+                ;
+            }
             gmsEndpoint.setUrl(host, port, apiVersion);
         }
         return gmsEndpoint;

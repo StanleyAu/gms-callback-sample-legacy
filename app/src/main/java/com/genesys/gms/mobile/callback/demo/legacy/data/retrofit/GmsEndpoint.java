@@ -1,5 +1,6 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.retrofit;
 
+import android.util.Log;
 import retrofit.Endpoint;
 
 /**
@@ -18,8 +19,13 @@ public class GmsEndpoint implements Endpoint {
         return "default";
     }
 
-    public void setUrl(String p_strHost, int p_nPort, int p_nApiVersion) {
-        m_strUrl = String.format("http://%s:%d/genesys/%d", p_strHost, p_nPort, p_nApiVersion);
+    public void setUrl(String p_strHost, Integer p_nPort, Integer p_nApiVersion) {
+        if(p_strHost == null || p_strHost.isEmpty() || p_nPort == null || p_nApiVersion == null) {
+            m_strUrl = null;
+        } else {
+            m_strUrl = String.format("http://%s:%d/genesys/%d", p_strHost, p_nPort, p_nApiVersion);
+        }
+        Log.d("GmsEndpoint", "Endpoint URL: " + m_strUrl);
         //Timber.d("Endpoint URL: ", m_strUrl);
     }
 

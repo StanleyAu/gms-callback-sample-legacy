@@ -3,6 +3,7 @@ package com.genesys.gms.mobile.callback.demo.legacy;
 import android.app.Application;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackServiceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
+import com.genesys.gms.mobile.callback.demo.legacy.ui.Globals;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
 
@@ -25,6 +26,7 @@ public class App extends Application {
         applicationGraph.inject(this);
         bus = EventBus.getDefault();
         registerManagers();
+        Globals.setupLogging(this);
 
         if (BuildConfig.DEBUG) {
             //Timber.plant(new Timber.DebugTree());

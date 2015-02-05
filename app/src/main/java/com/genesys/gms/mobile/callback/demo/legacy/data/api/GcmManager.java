@@ -8,9 +8,8 @@ import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.data.async.GcmRegisterAsync;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmReceiveEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmRegisterDoneEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmRegisterEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.async.GcmUnregisterAsync;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.*;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -51,24 +50,61 @@ public class GcmManager {
         this.context = context;
     }
 
+    @DebugLog
     public void onEvent(GcmRegisterEvent event) {
         if( !checkPlayServices() ) {
             // Google Play Services not available
+            bus.post(new GcmErrorEvent(null));
             return;
         }
         String strGcmRegId = getRegistrationId();
         if(!strGcmRegId.isEmpty()) {
-            bus.post(new GcmRegisterDoneEvent(strGcmRegId, event.senderId));
-        }
-        else {
+            String currentSenderId = sharedPreferences.getString(PROPERTY_SENDER_ID, null);
+            if(event.senderId == null || event.senderId.trim().isEmpty() || currentSenderId.equals(event.senderId)) {
+                bus.post(new GcmRegisterDoneEvent(strGcmRegId, currentSenderId));
+            } else {
+                // Re-register operation
+                bus.post(new GcmUnregisterEvent(event.senderId));
+            }
+        } else {
             GcmRegisterAsync async = new GcmRegisterAsync(googleCloudMessaging, event.senderId);
             async.execute();
         }
     }
 
+    @DebugLog
+    public void onEvent(GcmUnregisterEvent event) {
+        //Timber.i("Handling GCM unregister request: " + event.toString());
+        if( !checkPlayServices() ) {
+            bus.post(new GcmErrorEvent(null));
+            return;
+        }
+        String strGcmRegId = getRegistrationId();
+        if(strGcmRegId.isEmpty()) {
+            if(event.strNewSenderId == null || event.strNewSenderId.isEmpty()) {
+                bus.post(new GcmUnregisterDoneEvent(null));
+            } else {
+                // Re-register operation
+                bus.post(new GcmRegisterEvent(event.strNewSenderId));
+            }
+        } else {
+            GcmUnregisterAsync async = new GcmUnregisterAsync(googleCloudMessaging, event.strNewSenderId);
+            async.execute();
+        }
+    }
+
+    @DebugLog
     public void onEvent(GcmRegisterDoneEvent event) {
-        // TODO: Only if result was not cached
         storeRegistrationId(event.registrationId, event.senderId);
+    }
+
+    @DebugLog
+    public void onEvent(GcmUnregisterDoneEvent event) {
+        storeRegistrationId(null, null);
+        if(!event.isPendingWork()) {
+            return;
+        }
+        bus.post(new GcmRegisterEvent(event.strNewSenderId));
     }
 
     /**
@@ -79,6 +115,7 @@ public class GcmManager {
      *
      * @param event Returned event due to no subscribers
      */
+    @DebugLog
     public void onEvent(NoSubscriberEvent event) {
         CharSequence message = "Message received!";
         if(event.originalEvent instanceof GcmReceiveEvent) {
@@ -190,7 +227,7 @@ public class GcmManager {
     private synchronized void storeRegistrationId(String regId, String senderId) {
         int appVersion = getAppVersion();
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        if(regId.isEmpty()) {
+        if(regId == null || regId.isEmpty()) {
             editor.remove(PROPERTY_REG_ID);
             editor.remove(PROPERTY_APP_VERSION);
         } else {

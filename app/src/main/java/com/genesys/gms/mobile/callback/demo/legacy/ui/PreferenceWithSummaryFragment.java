@@ -25,8 +25,8 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 		f.setArguments(args);
 		return f;
 	}
-	
-	@Override
+
+    @Override
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
 	    addPreferencesFromResource(getArguments().getInt("preferences"));
@@ -35,14 +35,18 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 	@Override
 	public void onResume() {
 	    super.onResume();
-	    updatePreferenceSummary(getPreferenceScreen());	    
+	    updatePreferenceSummary(getPreferenceScreen());
 	    getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
+        // This is bad form but inevitable because we use this generic fragment
+        ((GenesysSampleActivity)getActivity()).onFragmentResume(this);
 	}
 
 	@Override
 	public void onPause() {
 	    super.onPause();
 	    getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
+        // This is bad form but inevitable because we use this generic fragment
+        ((GenesysSampleActivity)getActivity()).onFragmentPause(this);
 	}
 
 	@Override

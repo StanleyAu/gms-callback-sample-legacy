@@ -10,7 +10,7 @@ import java.util.Map;
 public class CallbackStartEvent {
     public final String serviceName;
     public final String _customer_number;
-    public final DateTime _desired_time;
+    public final String _desired_time;
     public final String _callback_state;
     public final String _urs_virtual_queue;
     public final String _request_queue_time_stat;
@@ -18,7 +18,7 @@ public class CallbackStartEvent {
 
     public CallbackStartEvent(String serviceName,
                             String _customer_number,
-                            DateTime _desired_time,
+                            String _desired_time,
                             String _callback_state,
                             String _urs_virtual_queue,
                             String _request_queue_time_stat,

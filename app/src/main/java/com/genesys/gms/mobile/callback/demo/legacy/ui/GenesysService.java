@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import android.util.Log;
+import hugo.weaving.DebugLog;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 import org.eclipse.jetty.client.ContentExchange;
@@ -43,7 +44,8 @@ public class GenesysService extends Service {
 	};
 	
 	private GenesysSession genesysSession;
-	
+
+    @DebugLog
 	public GenesysService() {
 		httpClient = new HttpClient();
 		httpClient.setConnectTimeout(Globals.CONNECT_TIMEOUT);

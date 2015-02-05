@@ -15,3 +15,16 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+-keepattributes Signature
+-keepattributes InnerClasses
+
+-dontwarn retrofit.**
+-dontwarn org.joda.time.**
+-dontwarn org.eclipse.jetty.**
+-dontwarn org.cometd.**
+-dontwarn okio.**
+-dontwarn com.squareup.okhttp.**
+-dontwarn ch.qos.logback.**
+
+-dontwarn dagger.internal.codegen.**

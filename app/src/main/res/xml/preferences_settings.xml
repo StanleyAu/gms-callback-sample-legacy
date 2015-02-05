@@ -45,7 +45,7 @@
         <EditTextPreference
             android:defaultValue=""
             android:inputType="textUri"
-            android:key="gcm_sender_id"
+            android:key="new_gcm_sender_id"
             android:singleLine="true"
             android:title="GCM sender id" />
 </PreferenceScreen>
