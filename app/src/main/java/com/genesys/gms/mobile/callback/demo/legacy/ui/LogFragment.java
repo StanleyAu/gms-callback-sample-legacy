@@ -8,7 +8,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import android.app.Fragment;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
@@ -18,9 +17,11 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import com.genesys.gms.mobile.callback.demo.legacy.BaseFragment;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 
 // TODO: make log scroll with inertia
-public class LogFragment extends Fragment {
+public class LogFragment extends BaseFragment {
 
 	private String logFile;
 	private ScrollView logScrollView;

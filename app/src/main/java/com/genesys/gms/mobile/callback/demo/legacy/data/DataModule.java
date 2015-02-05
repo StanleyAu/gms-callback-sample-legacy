@@ -1,7 +1,10 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data;
 
 import android.app.Application;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.ApiModule;
 import com.genesys.gms.mobile.callback.demo.legacy.data.gson.DateTimeTypeAdapter;
 import com.google.gson.FieldNamingPolicy;
@@ -54,8 +57,8 @@ public class DataModule {
     }
 
     @Provides @Singleton
-    SharedPreferences provideSharedPreferences(Application app) {
-        return app.getSharedPreferences("com.genesys.gms.mobile.push.demo", MODE_PRIVATE);
+    SharedPreferences provideSharedPreferences(@ForApplication Context context) {
+        return PreferenceManager.getDefaultSharedPreferences(context);
     }
 
     static OkHttpClient createOkHttpClient(Application app) {

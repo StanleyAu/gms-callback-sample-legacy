@@ -14,6 +14,7 @@ import android.preference.PreferenceGroup;
 import android.preference.TwoStatePreference;
 import android.text.InputType;
 
+// TODO: A multi-purpose generic fragment is actually more trouble than it's worth
 public class PreferenceWithSummaryFragment extends PreferenceFragment implements OnSharedPreferenceChangeListener {
 	protected Set<String> excludedPreferences = new HashSet<String>();
 	
@@ -47,7 +48,7 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 	@Override
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 		Preference pref = getPreferenceScreen().findPreference(key);
-		updatePreferenceSummary(pref);		
+		updatePreferenceSummary(pref);
 	}
 	
 	public Set<String> getExcludedPreferences()

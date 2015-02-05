@@ -6,12 +6,13 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v7.app.ActionBarActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
 
 /**
  * Activities extending this class will be bound to the {@link GenesysService}, and will be
  * able to handle intents by implementing the abstract method {@link #handleIntent(Intent)}.
  */
-public abstract class AbstractGenesysActivity extends ActionBarActivity {
+public abstract class AbstractGenesysActivity extends BaseActivity {
 
 	protected GenesysService genesysService;
 	

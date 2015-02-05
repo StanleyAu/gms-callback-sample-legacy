@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.genesys.gms.mobile.callback.demo.legacy.ui">
+          package="com.genesys.gms.mobile.callback.demo.legacy">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
@@ -13,18 +13,18 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme"
+        android:name=".App" >
 
-        <meta-data android:name="com.google.android.gms.version"
-                   android:value="@integer/google_play_services_version" />
+        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version"/>
 
         <activity
-            android:name="com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysChatActivity"
+            android:name=".ui.GenesysChatActivity"
             android:label="@string/title_activity_chat" >
         </activity>
 
         <activity
-            android:name="com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysSampleActivity"
+            android:name=".ui.GenesysSampleActivity"
             android:label="@string/title_activity_genesys_sample"
             android:launchMode="singleTask" >
             <intent-filter>
@@ -34,22 +34,25 @@
         </activity>
 
         <receiver
-            android:name="com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysCloudMessageReceiver"
+            android:name=".data.push.GcmBroadcastReceiver"
             android:permission="com.google.android.c2dm.permission.SEND" >
             <intent-filter>
                 <action android:name="com.google.android.c2dm.intent.RECEIVE" />
-                <category android:name="com.genesys.gms.mobile.callback.demo.legacy.android.sample" />
+                <category android:name="com.genesys.gms.mobile.callback.demo.legacy" />
             </intent-filter>
         </receiver>
 
         <service
-            android:name="com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysService"
+            android:name=".data.push.GcmIntentService" />
+
+        <service
+            android:name=".ui.GenesysService"
             android:exported="false"
             android:label="Genesys Service" >
         </service>
 
         <activity
-            android:name="com.genesys.gms.mobile.callback.demo.legacy.ui.LogActivity"
+            android:name=".ui.LogActivity"
             android:label="@string/title_activity_log" >
         </activity>
 

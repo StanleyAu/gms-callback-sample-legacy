@@ -27,6 +27,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatListener;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatSession;

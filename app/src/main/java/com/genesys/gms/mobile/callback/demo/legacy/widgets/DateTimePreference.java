@@ -7,7 +7,7 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.widget.NumberPicker;
-import com.genesys.gms.mobile.callback.demo.legacy.ui.R;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;

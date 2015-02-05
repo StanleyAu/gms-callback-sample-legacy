@@ -18,8 +18,8 @@ public class GmsEndpoint implements Endpoint {
         return "default";
     }
 
-    public void setUrl(String p_strHost, String p_strPort, int p_nApiVersion) {
-        m_strUrl = String.format("http://%s:%s/genesys/%d", p_strHost, p_strPort, p_nApiVersion);
+    public void setUrl(String p_strHost, int p_nPort, int p_nApiVersion) {
+        m_strUrl = String.format("http://%s:%d/genesys/%d", p_strHost, p_nPort, p_nApiVersion);
         //Timber.d("Endpoint URL: ", m_strUrl);
     }
 

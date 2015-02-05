@@ -10,4 +10,11 @@
     <string name="title_activity_log">Log</string>
     <string name="action_clear_log">Clear</string>
 
+    <string name="key_property_host">endpoint_host</string>
+    <string name="key_property_port">endpoint_port</string>
+    <string name="key_property_api_version">api_version</string>
+
+    <string name="title_property_host">Hostname or IP</string>
+    <string name="title_property_port">Port</string>
+    <string name="title_property_api_version">API Version</string>
 </resources>

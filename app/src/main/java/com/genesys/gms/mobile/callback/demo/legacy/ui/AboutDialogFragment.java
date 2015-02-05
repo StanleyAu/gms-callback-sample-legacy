@@ -6,6 +6,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import com.genesys.gms.mobile.callback.demo.legacy.BuildConfig;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 
 /**
  * Created by stau on 12/4/2014.

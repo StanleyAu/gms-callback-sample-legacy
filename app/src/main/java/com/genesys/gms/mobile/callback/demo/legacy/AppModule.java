@@ -3,6 +3,7 @@ package com.genesys.gms.mobile.callback.demo.legacy;
 import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
+import com.genesys.gms.mobile.callback.demo.legacy.data.DataModule;
 import com.genesys.gms.mobile.callback.demo.legacy.data.push.GcmIntentService;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import dagger.Module;
@@ -18,9 +19,9 @@ import javax.inject.Singleton;
         App.class,
         GcmIntentService.class
     },
-    /*includes = {
+    includes = {
         DataModule.class
-    },*/
+    },
     library = true
 )
 public class AppModule {

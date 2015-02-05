@@ -1,16 +1,15 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
-import android.app.Activity;
 import android.os.Bundle;
+import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 
-public class LogActivity extends Activity {
+public class LogActivity extends BaseActivity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		getFragmentManager().beginTransaction()
-        	.replace(android.R.id.content, new LogFragment())
-        	.commit();
+		setContentView(R.layout.log_parent_layout);
 	}
 
 }

@@ -8,7 +8,10 @@ public class CallbackException {
     private final String exception;
     private final String error;
 
-    public CallbackException(String message, String exception, String error) {
+
+    public CallbackException(String message,
+                             String exception,
+                             String error) {
         this.message = message;
         this.exception = exception;
         this.error = error;

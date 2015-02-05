@@ -9,6 +9,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBar.Tab;
 import android.view.Menu;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 
 public abstract class AbstractTabActivity extends AbstractGenesysActivity {
 	

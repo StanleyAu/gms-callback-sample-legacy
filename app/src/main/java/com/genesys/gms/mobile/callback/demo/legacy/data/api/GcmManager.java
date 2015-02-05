@@ -2,11 +2,17 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.data.async.GcmRegisterAsync;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmReceiveEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmRegisterDoneEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmRegisterEvent;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.NoSubscriberEvent;
@@ -22,29 +28,51 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class GcmManager {
     private final GoogleCloudMessaging googleCloudMessaging;
     private final EventBus bus;
+    private final SharedPreferences sharedPreferences;
     private final Context context;
     private AtomicInteger idGen = new AtomicInteger();
+
+    public final static String PROPERTY_SENDER_ID = "gcm_sender_id";
+    public final static String PROPERTY_REG_ID = "registration_id";
+    private static final String PROPERTY_APP_VERSION = "app_version";
+    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
     NotificationManager mNotificationManager;
     // private static final long[] VIBRATE_PATTERN = {350L, 200L, 350L};
     public static final String GCM_NOTIFICATION_ID = "gcm_notification_id";
+
     private Object savedEvent;
 
     @Inject @DebugLog
-    public GcmManager(GoogleCloudMessaging googleCloudMessaging, @ForApplication Context context) {
+    public GcmManager(GoogleCloudMessaging googleCloudMessaging, SharedPreferences sharedPreferences, @ForApplication Context context) {
         this.googleCloudMessaging = googleCloudMessaging;
         this.bus = EventBus.getDefault();
+        this.sharedPreferences = sharedPreferences;
         this.context = context;
     }
 
     public void onEvent(GcmRegisterEvent event) {
-        // Cache should be consulted prior to delivering GcmRegisterEvent
-        GcmRegisterAsync async = new GcmRegisterAsync(googleCloudMessaging, event.senderId);
-        async.execute();
+        if( !checkPlayServices() ) {
+            // Google Play Services not available
+            return;
+        }
+        String strGcmRegId = getRegistrationId();
+        if(!strGcmRegId.isEmpty()) {
+            bus.post(new GcmRegisterDoneEvent(strGcmRegId, event.senderId));
+        }
+        else {
+            GcmRegisterAsync async = new GcmRegisterAsync(googleCloudMessaging, event.senderId);
+            async.execute();
+        }
+    }
+
+    public void onEvent(GcmRegisterDoneEvent event) {
+        // TODO: Only if result was not cached
+        storeRegistrationId(event.registrationId, event.senderId);
     }
 
     /**
-     * DeadEvent subscription allows us to observe events for which there are
+     * NoSubscriberEvent subscription allows us to observe events for which there are
      * no subscribers. This is particularly handy for seeing if there is an
      * Activity around to handle our GCM event (in the event that the application
      * has been put into the background when our notification arrives).
@@ -88,6 +116,8 @@ public class GcmManager {
         //getNotificationManager().notify(0, builder.build());
     }
 
+
+
     protected NotificationManager getNotificationManager() {
         if(mNotificationManager==null) {
             mNotificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -104,5 +134,71 @@ public class GcmManager {
             .setContentText(text)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true);
+    }
+
+    private boolean checkPlayServices() {
+        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(context);
+        if(resultCode!= ConnectionResult.SUCCESS){
+            // Timber.w("Google Play Services are not available.");
+            if(GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
+                // GooglePlayServicesUtil.getErrorDialog(resultCode, getActivity(), PLAY_SERVICES_RESOLUTION_REQUEST).show();
+            } else {
+                // TODO: Publish event to indicate GooglePlayServices is not available
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private String getRegistrationId() {
+        String registrationId = sharedPreferences.getString(PROPERTY_REG_ID, "");
+        if(registrationId.isEmpty()) {
+            // No registration found
+            //Timber.d("No saved Registration ID found.");
+            return "";
+        }
+        int registeredVersion = sharedPreferences.getInt(PROPERTY_APP_VERSION, Integer.MIN_VALUE);
+        int currentVersion = getAppVersion();
+        if(registeredVersion!=currentVersion) {
+            // Version changed
+            //Timber.d("Version ID has changed and Registration ID is no longer valid.");
+            return "";
+        }
+        return registrationId;
+    }
+
+    // TODO: Move into utility class
+    private int getAppVersion() {
+        try {
+            PackageInfo packageInfo = context.getPackageManager()
+                .getPackageInfo(context.getPackageName(), 0);
+            return packageInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            //Timber.e(e, "Failed to obtain application version code.");
+            throw new RuntimeException("Could not get package name: " + e);
+        }
+    }
+
+    /**
+     * Saves/Clears the GCM Registration ID in SharedPreferences.
+     * Synchronized to prevent two threads from somehow simultaneously
+     * mucking around with the GCM Registration ID.
+     *
+     * @param regId GCM Registration ID to store. Empty if clearing persisted data.
+     */
+    @DebugLog
+    private synchronized void storeRegistrationId(String regId, String senderId) {
+        int appVersion = getAppVersion();
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        if(regId.isEmpty()) {
+            editor.remove(PROPERTY_REG_ID);
+            editor.remove(PROPERTY_APP_VERSION);
+        } else {
+            editor.putString(PROPERTY_REG_ID, regId);
+            editor.putString(PROPERTY_SENDER_ID, senderId);
+            editor.putInt(PROPERTY_APP_VERSION, appVersion);
+        }
+        // apply() tells the editor to perform the save asynchronously.
+        editor.apply();
     }
 }

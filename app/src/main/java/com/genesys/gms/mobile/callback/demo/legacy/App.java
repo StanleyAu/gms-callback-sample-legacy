@@ -1,8 +1,8 @@
 package com.genesys.gms.mobile.callback.demo.legacy;
 
 import android.app.Application;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackServiceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
-import com.genesys.gms.mobile.callback.demo.legacy.ui.BuildConfig;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
 
@@ -17,6 +17,7 @@ public class App extends Application {
     private ObjectGraph applicationGraph;
     private EventBus bus;
     @Inject GcmManager gcmManager;
+    @Inject CallbackServiceManager callbackServiceManager;
 
     @Override public void onCreate() {
         super.onCreate();
@@ -35,10 +36,12 @@ public class App extends Application {
 
     public void registerManagers() {
         bus.register(gcmManager);
+        bus.register(callbackServiceManager);
     }
 
     public void unregisterManagers() {
         bus.unregister(gcmManager);
+        bus.unregister(callbackServiceManager);
     }
 
     protected List<Object> getModules() {

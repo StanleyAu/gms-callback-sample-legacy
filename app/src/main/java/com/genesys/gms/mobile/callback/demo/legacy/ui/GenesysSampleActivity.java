@@ -1,10 +1,9 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import android.app.DialogFragment;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceManager;
+import android.preference.*;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
+import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import hugo.weaving.DebugLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +17,18 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import javax.inject.Inject;
+
 // TODO: Possibly redesign how the communication from service to activity is done. Now it is done with explicit intents, configuring the activity as singleTask.
 public class GenesysSampleActivity extends AbstractTabActivity implements OnSharedPreferenceChangeListener {
 
 	private final Logger log = LoggerFactory.getLogger(Globals.GENESYS_LOG_TAG);
+    private static final String ENDPOINT_HOST = "endpoint_host";
+    private static final String ENDPOINT_PORT = "endpoint_port";
+    private static final String ENDPOINT_API_VERSION = "endpoint_api_version";
 
+    @Inject SharedPreferences sharedPreferences;
+    @Inject GmsEndpoint gmsEndpoint;
 	private GenesysController controller;
 
 	@DebugLog
@@ -50,13 +56,98 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 		callbackFragment.getExcludedPreferences().add("desired_time");
 	}
 
+    private void tryUpdateEndpoint() {
+        String strHost = sharedPreferences.getString(ENDPOINT_HOST, null);
+        String strPort = sharedPreferences.getString(ENDPOINT_PORT, null);
+        String strApiVersion = sharedPreferences.getString(ENDPOINT_API_VERSION, null);
+        if(strHost == null || strPort == null || strApiVersion == null) {
+            return;
+        }
+        int port;
+        try{
+            port = Integer.parseInt(strPort);
+        } catch(NumberFormatException e) {
+            return;
+        }
+        int version;
+        try{
+            version = Integer.parseInt(strApiVersion);
+        } catch(NumberFormatException e) {
+            return;
+        }
+        gmsEndpoint.setUrl(strHost, port, version);
+    }
+
 	@Override @DebugLog
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
 		Globals.setupLogging(this);
 		LoggingExceptionHandler.setDefaultUncaughtExceptionHandler(log);
-		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 		sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+
+        PreferenceWithSummaryFragment settingsFragment = (PreferenceWithSummaryFragment)tabs[1].fragment;
+        EditTextPreference hostProperty = (EditTextPreference)settingsFragment.findPreference(getResources().getString(R.string.key_property_host));
+        if(hostProperty != null) {
+            hostProperty.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    if (newValue == null) {
+                        return false;
+                    }
+                    newValue = newValue.toString().trim();
+                    return true;
+                }
+            });
+        } else {
+            log.debug("Host property was null!");
+        }
+        EditTextPreference portProperty = (EditTextPreference)settingsFragment.findPreference(getResources().getString(R.string.key_property_port));
+        if(portProperty != null) {
+            portProperty.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    if (newValue == null) {
+                        return false;
+                    }
+                    newValue = newValue.toString().trim();
+                    int port;
+                    try {
+                        port = Integer.parseInt(newValue.toString());
+                    } catch (NumberFormatException e) {
+                        return false;
+                    }
+                    if (port < 0 || port > 65535) {
+                        return false;
+                    }
+                    // Try to update GmsEndpoint!
+                    return true;
+                }
+            });
+        } else {
+            log.debug("Port property was null!");
+        }
+        EditTextPreference apiVersionProperty = (EditTextPreference)settingsFragment.findPreference(getResources().getString(R.string.key_property_api_version));
+        if(apiVersionProperty != null) {
+            apiVersionProperty.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+                @Override
+                public boolean onPreferenceChange(Preference preference, Object newValue) {
+                    if (newValue == null) {
+                        return false;
+                    }
+                    newValue = newValue.toString().trim();
+                    int version;
+                    try {
+                        version = Integer.parseInt(newValue.toString());
+                    } catch (NumberFormatException e) {
+                        return false;
+                    }
+                    // Try to update GmsEndpoint!
+                    return true;
+                }
+            });
+        } else {
+            log.debug("Version property was null!");
+        }
 	}
 
 	@DebugLog
@@ -94,7 +185,6 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	@Override @DebugLog
 	public void onResume() {
 	    super.onResume();
-	    SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 	    sharedPreferences.registerOnSharedPreferenceChangeListener(this);
 	}
 	
@@ -106,8 +196,6 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	
 	protected void checkDesiredTimeEnabled()
 	{
-		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-		
 		PreferenceFragment callbackFragment = (PreferenceFragment)tabs[0].fragment;
 		Preference desiredTime = (Preference)callbackFragment.findPreference("desired_time");
 		Preference selectedTime = (Preference)callbackFragment.findPreference("selected_time");
@@ -121,9 +209,8 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 			desiredTime.setEnabled(true);
 			selectedTime.setEnabled(true);
 		}
-		else
-		{
-			desiredTime.setEnabled(false);
+		else {
+            desiredTime.setEnabled(false);
 			selectedTime.setEnabled(false);
 		}
 	}
@@ -131,7 +218,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	@Override
 	public void onPause() {
 	    super.onPause();
-	    PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(this);
+	    sharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
 	}
 	
 	@Override

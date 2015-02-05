@@ -35,7 +35,7 @@ public class GcmRegisterAsync extends AsyncTask<Void, Void, String> {
     @Override
     protected void onPostExecute(String result) {
         if(result!=null && !result.isEmpty()) {
-            bus.post(new GcmRegisterDoneEvent(result));
+            bus.post(new GcmRegisterDoneEvent(result, senderId));
         } else if(savedException!=null) {
             bus.post(new GcmErrorEvent(savedException));
         } else {

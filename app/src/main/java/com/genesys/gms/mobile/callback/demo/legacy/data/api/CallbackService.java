@@ -26,13 +26,11 @@ public interface CallbackService {
 
     @DELETE("/service/callback/{service_name}/{service_id}")
     public Response cancelCallback(@Path("service_name") String serviceName,
-                                   @Path("service_id") String serviceID,
-                                   @Body Map<String, String> params);
+                                   @Path("service_id") String serviceID);
 
     @DELETE("/service/callback/{service_name}/{service_id}")
     public void cancelCallback(@Path("service_name") String serviceName,
                                    @Path("service_id") String serviceID,
-                                   @Body Map<String, String> params,
                                    Callback<Response> callback);
 
     @PUT("/service/callback/{service_name}/{service_id}")
@@ -57,21 +55,27 @@ public interface CallbackService {
 
     @GET("/service/callback/{service_name}/availability")
     public Map<DateTime, Integer> queryAvailability(@Path("service_name") String serviceName,
-                                                    @Query("timestamp") String timestamp);
+                                                    @Query("start") DateTime start,
+                                                    @Query("number-of-days") Integer numberOfDays,
+                                                    @Query("end") DateTime end,
+                                                    @Query("max-time-slots") Integer maxTimeSlots);
 
     @GET("/service/callback/{service_name}/availability")
     public void queryAvailability(@Path("service_name") String serviceName,
-                                    @Query("timestamp") String timestamp,
-                                    Callback<Map<DateTime, Integer>> callback);
+                                  @Query("start") DateTime start,
+                                  @Query("number-of-days") Integer numberOfDays,
+                                  @Query("end") DateTime end,
+                                  @Query("max-time-slots") Integer maxTimeSlots,
+                                  Callback<Map<DateTime, Integer>> callback);
 
     @GET("/admin/callback/queues")
     public Map<String, List<CallbackAdminRequest>> queryCallbackAdmin(@Query("target") String targetName,
                                                                       @Query("end_time") String endTime,
-                                                                      @Query("max") int max);
+                                                                      @Query("max") Integer max);
 
     @GET("/admin/callback/queues")
     public void queryCallbackAdmin(@Query("target") String targetName,
                                       @Query("end_time") String endTime,
-                                      @Query("max") int max,
+                                      @Query("max") Integer max,
                                       Callback<Map<String, List<CallbackAdminRequest>>> callback);
 }

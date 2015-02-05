@@ -16,6 +16,7 @@ import javax.inject.Singleton;
     injects = {
         GenesysSampleActivity.class,
         GenesysChatActivity.class,
+        LogActivity.class,
         LogFragment.class,
         PreferenceWithSummaryFragment.class
     },

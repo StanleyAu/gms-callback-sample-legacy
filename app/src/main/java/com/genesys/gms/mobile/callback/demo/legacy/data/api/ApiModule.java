@@ -2,7 +2,6 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import android.content.SharedPreferences;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
-import com.genesys.gms.mobile.callback.demo.legacy.ui.BuildConfig;
 import com.genesys.gms.mobile.callback.demo.legacy.ui.Globals;
 import com.google.gson.Gson;
 import com.squareup.okhttp.OkHttpClient;
@@ -27,9 +26,11 @@ public class ApiModule {
     GmsEndpoint provideEndpoint(SharedPreferences sharedPreferences) {
         GmsEndpoint gmsEndpoint = new GmsEndpoint();
         String host = sharedPreferences.getString(Globals.PROPERTY_HOST, "");
-        String port = sharedPreferences.getString(Globals.PROPERTY_PORT, "");
-        int apiVersion = sharedPreferences.getInt(Globals.PROPERTY_API_VERSION, 1);
-        if(!host.isEmpty() && !port.isEmpty()) {
+        String strPort = sharedPreferences.getString(Globals.PROPERTY_PORT, "8080");
+        String strApiVersion = sharedPreferences.getString(Globals.PROPERTY_API_VERSION, "1");
+        if(!host.isEmpty() && !strPort.isEmpty() && !strApiVersion.isEmpty()) {
+            int port = Integer.parseInt(strPort);
+            int apiVersion = Integer.parseInt(strApiVersion);
             gmsEndpoint.setUrl(host, port, apiVersion);
         }
         return gmsEndpoint;

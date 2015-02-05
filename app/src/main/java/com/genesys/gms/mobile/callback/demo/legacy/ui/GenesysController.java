@@ -10,6 +10,7 @@ import android.preference.ListPreference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
