@@ -6,12 +6,7 @@ import java.util.Set;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
-import android.preference.EditTextPreference;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceGroup;
-import android.preference.TwoStatePreference;
+import android.preference.*;
 import android.text.InputType;
 import hugo.weaving.DebugLog;
 

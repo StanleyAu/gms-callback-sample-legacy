@@ -302,7 +302,7 @@ public class GenesysController {
 	public void updateTimeSlots(Context context, Map<DateTime, Integer> availability)
 	{
         GenesysSampleActivity activity = (GenesysSampleActivity)context;
-        PreferenceFragment callbackFragment = (PreferenceFragment)activity.tabs[0].fragment;
+        PreferenceFragment callbackFragment = (PreferenceFragment)activity.getFragment(0);
         ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
         List<Pair<String,String>> newEntries = new ArrayList<Pair<String,String>>();
 

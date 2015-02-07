@@ -2,6 +2,7 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import android.app.DialogFragment;
 import android.preference.*;
+import android.support.v4.app.Fragment;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
@@ -38,28 +39,6 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 
 	@DebugLog
 	public GenesysSampleActivity() {
-		super(new TabElement[] {
-				new TabElement(
-						"Connect",
-						PreferenceWithSummaryFragment.create(R.xml.preferences_callback),
-						R.drawable.ic_action_cloud,
-						R.menu.callback_actions),
-				new TabElement(
-						"Settings",
-						PreferenceWithSummaryFragment.create(R.xml.preferences_settings),
-						R.drawable.ic_action_settings,
-						null),
-				new TabElement(
-						"Queue",
-						PreferenceWithSummaryFragment.create(R.xml.preferences_queue),
-						R.drawable.ic_action_forward,
-						R.menu.queue_actions),
-			});
-		// Hack to prevent auto-updating of selected_time
-		PreferenceWithSummaryFragment callbackFragment = (PreferenceWithSummaryFragment)tabs[0].fragment;
-		callbackFragment.getExcludedPreferences().add("selected_time");
-		callbackFragment.getExcludedPreferences().add("desired_time");
-
         this.bus = EventBus.getDefault();
 	}
 
@@ -89,15 +68,14 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
 		LoggingExceptionHandler.setDefaultUncaughtExceptionHandler(log);
-		// sharedPreferences.registerOnSharedPreferenceChangeListener(this);
 	}
 
 	@DebugLog
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key)
 	{
         // TODO: Should delegate preference handling to Controller
-		PreferenceFragment callbackFragment = (PreferenceFragment)tabs[0].fragment;
-        PreferenceFragment settingsFragment = (PreferenceFragment)tabs[1].fragment;
+		PreferenceFragment callbackFragment = (PreferenceFragment)this.getFragment(0);
+        PreferenceFragment settingsFragment = (PreferenceFragment)this.getFragment(1);
 		// TODO: When desired_date changes, start async task to update time_slots
 		if (key.equals("scenario"))
 		{
@@ -215,7 +193,60 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	    return result;
 	}
 
-	@Override
+    @Override
+    public CharSequence getTabTitle(int which) {
+        switch(which) {
+            case 0:
+                return "Connect";
+            case 1:
+                return "Settings";
+            case 2:
+                return "Queue";
+            default:
+                break;
+        }
+        return null;
+    }
+
+    @Override
+    public Fragment createFragment(int which) {
+        switch(which) {
+            case 0:
+                PreferenceWithSummaryFragment callbackFragment = PreferenceWithSummaryFragment.create(R.xml.preferences_callback);
+                callbackFragment.getExcludedPreferences().add("selected_time");
+                callbackFragment.getExcludedPreferences().add("desired_time");
+                return callbackFragment;
+            case 1:
+                return PreferenceWithSummaryFragment.create(R.xml.preferences_settings);
+            case 2:
+                return PreferenceWithSummaryFragment.create(R.xml.preferences_queue);
+            default:
+                break;
+        }
+        return null;
+    }
+
+    @Override
+    public int getTabCount() {
+        return 3;
+    }
+
+    @Override
+    public Integer getFragmentMenu(int which) {
+        switch(which) {
+            case 0:
+                return R.menu.callback_actions;
+            case 1:
+                return null;
+            case 2:
+                return R.menu.queue_actions;
+            default:
+                break;
+        }
+        return null;
+    }
+
+    @Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		if(item.getItemId()==R.id.connect) {
             if(!gmsEndpoint.isUrlSet()) {
@@ -272,7 +303,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         // Because the PreferenceFragment is being used, simple things like
         // toggling Enabled is ugly.
         Toast.makeText(this, "GCM Registered!", Toast.LENGTH_SHORT).show();
-        PreferenceFragment settingsFragment = (PreferenceFragment)tabs[1].fragment;
+        PreferenceFragment settingsFragment = (PreferenceFragment)this.getFragment(1);
         Preference pushToggle = settingsFragment.findPreference("push_notifications_enabled");
         Preference senderIdField = settingsFragment.findPreference("new_gcm_sender_id");
         if(pushToggle != null && senderIdField != null) {
@@ -288,7 +319,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
             return;
         }
         Toast.makeText(this, "GCM Unregistered!", Toast.LENGTH_SHORT).show();
-        PreferenceFragment settingsFragment = (PreferenceFragment)tabs[1].fragment;
+        PreferenceFragment settingsFragment = (PreferenceFragment)this.getFragment(1);
         Preference pushToggle = settingsFragment.findPreference("push_notifications_enabled");
         Preference senderIdField = settingsFragment.findPreference("new_gcm_sender_id");
         if(pushToggle != null && senderIdField != null) {
@@ -301,7 +332,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     public void onEventMainThread(GcmErrorEvent event) {
         Toast.makeText(this, "GCM Error!", Toast.LENGTH_SHORT).show();
         log.debug("GCM Error encountered: " + event.error);
-        PreferenceFragment settingsFragment = (PreferenceFragment)tabs[1].fragment;
+        PreferenceFragment settingsFragment = (PreferenceFragment)this.getFragment(1);
         Preference pushToggle = settingsFragment.findPreference("push_notifications_enabled");
         Preference senderIdField = settingsFragment.findPreference("new_gcm_sender_id");
         if(pushToggle != null && senderIdField != null) {
