@@ -1,5 +1,6 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -7,6 +8,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.preference.*;
+import android.support.v4.preference.PreferenceFragment;
 import android.text.InputType;
 import hugo.weaving.DebugLog;
 
@@ -21,6 +23,24 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 		f.setArguments(args);
 		return f;
 	}
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putStringArray("exclusions", excludedPreferences.toArray(new String[excludedPreferences.size()]));
+    }
+
+    @Override
+    public void onViewStateRestored(Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        if(savedInstanceState==null) {
+            return;
+        }
+        String[] exclusions = savedInstanceState.getStringArray("exclusions");
+        if(exclusions != null) {
+            excludedPreferences = new HashSet<String>(Arrays.asList(savedInstanceState.getStringArray("exclusions")));
+        }
+    }
 
     @Override @DebugLog
 	public void onCreate(Bundle savedInstanceState) {

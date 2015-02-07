@@ -36,6 +36,8 @@ public abstract class AbstractTabActivity extends AbstractGenesysActivity {
             }
         };
         pager.setOnPageChangeListener(onPageChangeListener);
+        tabs.setShouldExpand(true);
+        tabs.setViewPager(pager);
         tabs.setOnPageChangeListener(onPageChangeListener);
 	}
 	

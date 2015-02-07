@@ -1,8 +1,10 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import android.app.DialogFragment;
-import android.preference.*;
+import android.preference.ListPreference;
+import android.preference.Preference;
 import android.support.v4.app.Fragment;
+import android.support.v4.preference.PreferenceFragment;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;

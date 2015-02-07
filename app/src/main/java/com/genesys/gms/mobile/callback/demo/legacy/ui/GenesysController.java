@@ -3,8 +3,8 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 import java.util.*;
 
 import android.preference.ListPreference;
-import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.support.v4.preference.PreferenceFragment;
 import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
@@ -317,7 +317,7 @@ public class GenesysController {
             if(entry.getKey().isBeforeNow()) {
                 continue;
             }
-            if(entry.getValue() != null && entry.getValue() > 0) {
+            if(availableSlot != null && availableSlot > 0) {
                 friendlyTime = TimeHelper.toFriendlyString(timeSlot);
                 strTimeSlot = TimeHelper.serializeUTCTime(timeSlot);
                 newEntries.add(new Pair<String, String>(
