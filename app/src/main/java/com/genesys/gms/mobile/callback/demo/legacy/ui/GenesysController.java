@@ -304,7 +304,15 @@ public class GenesysController {
 	{
         GenesysSampleActivity activity = (GenesysSampleActivity)context;
         PreferenceFragment callbackFragment = (PreferenceFragment)activity.getFragment(0);
+        if (callbackFragment == null) {
+            Log.w("GenesysSampleActivity", "Failed to update time slots. Callback fragment is null");
+            return;
+        }
         ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
+        if (selectedTime == null) {
+            Log.w("GenesysSampleActivity", "Failed to update time slots. selected_time pref is null");
+            return;
+        }
         List<Pair<String,String>> newEntries = new ArrayList<Pair<String,String>>();
 
         DateTime timeSlot;

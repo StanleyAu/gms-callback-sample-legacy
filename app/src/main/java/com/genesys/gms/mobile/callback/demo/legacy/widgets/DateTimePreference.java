@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.NumberPicker;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
+import hugo.weaving.DebugLog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -216,7 +217,7 @@ public class DateTimePreference extends DialogPreference
         return result;
     }
 
-    @Override
+    @Override @DebugLog
     protected void onDialogClosed(boolean positiveResult)
     {
         super.onDialogClosed(positiveResult);
@@ -225,8 +226,8 @@ public class DateTimePreference extends DialogPreference
             readPickers();
             if(callChangeListener(currentDT))
             {
+                Log.d("DateTimePreference", "callChangeListener is true");
                 persistString(currentDT);
-                
                 setSummary(TimeHelper.toFriendlyString(currentDT));
             }
         }

@@ -56,6 +56,6 @@ public class Globals {
 	    root.addAppender(fileAppender);
 	}
 
-	static final Class<?> RECEIVER_ACTIVITY_CLASS =  GenesysSampleActivity.class;
+	public static final Class<?> RECEIVER_ACTIVITY_CLASS =  GenesysSampleActivity.class;
 	
 }

@@ -33,6 +33,7 @@ import javax.inject.Inject;
 // TODO: Possibly redesign how the communication from service to activity is done. Now it is done with explicit intents, configuring the activity as singleTask.
 public class GenesysSampleActivity extends AbstractTabActivity implements OnSharedPreferenceChangeListener {
 	private final Logger log = LoggerFactory.getLogger(Globals.GENESYS_LOG_TAG);
+    public static final CharSequence[] EMPTY_LIST = {};
 
     @Inject SharedPreferences sharedPreferences;
     @Inject GmsEndpoint gmsEndpoint;
@@ -86,23 +87,37 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 		}
 		else if (key.equals("desired_time"))
 		{
-			ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
-			if(selectedTime!=null)
-			{
-				String serviceName = sharedPreferences.getString("service_name", null);
-				String desiredTime = sharedPreferences.getString("desired_time", null);
-				controller.requestTimeSlots(serviceName, desiredTime);
-				selectedTime.setEnabled(false);
-				Toast.makeText(this, "Updating time slots...", Toast.LENGTH_SHORT).show();
-			}
+            Preference desiredTimePref = callbackFragment.findPreference("desired_time");
+            if(desiredTimePref == null) {
+                return;
+            }
+            String desiredTime = sharedPreferences.getString("desired_time", null);
+            if(desiredTime != null) {
+                ListPreference selectedTimePref = (ListPreference) callbackFragment.findPreference("selected_time");
+                if (selectedTimePref != null) {
+                    selectedTimePref.setEnabled(false);
+                    selectedTimePref.setSummary("Select desired time above");
+                    selectedTimePref.setEntries(EMPTY_LIST);
+                    selectedTimePref.setEntryValues(EMPTY_LIST);
+                    selectedTimePref.setValue(null);
+                    selectedTimePref.getEditor().remove("selected_time").apply();
+
+                    String serviceName = sharedPreferences.getString("service_name", null);
+                    controller.requestTimeSlots(serviceName, desiredTime);
+                    Toast.makeText(this, "Updating time slots...", Toast.LENGTH_SHORT).show();
+                }
+            }
 		}
 		else if (key.equals("selected_time"))
 		{
-			ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
-			if(selectedTime!=null)
-			{
-				CharSequence value = selectedTime.getEntry();
-				selectedTime.setSummary(value == null || value.length() == 0 ? "[nothing selected]" : value);
+			ListPreference selectedTimePref = (ListPreference)callbackFragment.findPreference("selected_time");
+			if(selectedTimePref == null) {
+                return;
+            }
+            String selectedTime = sharedPreferences.getString("selected_time", null);
+            if(selectedTime != null) {
+				CharSequence value = selectedTimePref.getEntry();
+				selectedTimePref.setSummary(value == null || value.length() == 0 ? "[nothing selected]" : value);
 			}
 		}
         else if (key.equals(Globals.PROPERTY_HOST) ||
@@ -167,9 +182,9 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     @DebugLog
 	protected void checkDesiredTimeEnabled(PreferenceFragment callbackFragment)
 	{
-		Preference desiredTime = (Preference)callbackFragment.findPreference("desired_time");
-		Preference selectedTime = (Preference)callbackFragment.findPreference("selected_time");
-		if(desiredTime==null || selectedTime == null)
+		Preference desiredTimePref = callbackFragment.findPreference("desired_time");
+		ListPreference selectedTimePref = (ListPreference)callbackFragment.findPreference("selected_time");
+		if(desiredTimePref==null || selectedTimePref == null)
 		{
             log.warn("Desired Time fields not yet available.");
 			// Has not yet been created. Avoid crash.
@@ -177,12 +192,21 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 		}
 		if("VOICE-SCHEDULED-USERTERM".equals(sharedPreferences.getString("scenario", null)))
 		{
-			desiredTime.setEnabled(true);
-			selectedTime.setEnabled(true);
+			desiredTimePref.setEnabled(true);
+			selectedTimePref.setEnabled(true);
 		}
 		else {
-            desiredTime.setEnabled(false);
-			selectedTime.setEnabled(false);
+            desiredTimePref.setEnabled(false);
+            desiredTimePref.setSummary("Tap to select");
+            selectedTimePref.setEnabled(false);
+            selectedTimePref.setSummary("Select desired time above");
+            selectedTimePref.setEntries(EMPTY_LIST);
+            selectedTimePref.setEntryValues(EMPTY_LIST);
+            selectedTimePref.setValue(null);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.remove("desired_time");
+            editor.remove("selected_time");
+            editor.apply();
 		}
 	}
 	

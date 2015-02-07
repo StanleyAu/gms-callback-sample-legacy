@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.preference.*;
 import android.support.v4.preference.PreferenceFragment;
 import android.text.InputType;
+import android.util.Log;
 import hugo.weaving.DebugLog;
 
 // TODO: A multi-purpose generic fragment is actually more trouble than it's worth
@@ -28,17 +29,49 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putStringArray("exclusions", excludedPreferences.toArray(new String[excludedPreferences.size()]));
+        ListPreference selectedTimePref = (ListPreference)findPreference("selected_time");
+        if(selectedTimePref != null) {
+            outState.putCharSequenceArray("timeKeys", selectedTimePref.getEntries());
+            outState.putCharSequenceArray("timeValues", selectedTimePref.getEntryValues());
+            outState.putCharSequence("selectedSummary", selectedTimePref.getSummary());
+        }
+
+        Preference desiredTimePref = findPreference("desired_time");
+        if(desiredTimePref != null) {
+            outState.putCharSequence("desiredSummary", desiredTimePref.getSummary());
+        }
     }
 
     @Override
-    public void onViewStateRestored(Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
-        if(savedInstanceState==null) {
-            return;
+    public void onViewStateRestored(Bundle inState) {
+        super.onViewStateRestored(inState);
+
+        Preference desiredTimePref = findPreference("desired_time");
+        if(desiredTimePref != null && inState != null) {
+            CharSequence desiredSummary = inState.getCharSequence("desiredSummary");
+            if(desiredSummary != null) {
+                desiredTimePref.setSummary(desiredSummary);
+            }
         }
-        String[] exclusions = savedInstanceState.getStringArray("exclusions");
-        if(exclusions != null) {
-            excludedPreferences = new HashSet<String>(Arrays.asList(savedInstanceState.getStringArray("exclusions")));
+
+        ListPreference selectedTimePref = (ListPreference)findPreference("selected_time");
+        if(selectedTimePref != null && inState != null) {
+            String[] exclusions = inState.getStringArray("exclusions");
+            if (exclusions != null) {
+                excludedPreferences = new HashSet<String>(Arrays.asList(inState.getStringArray("exclusions")));
+            }
+            CharSequence[] timeKeys = inState.getCharSequenceArray("timeKeys");
+            CharSequence[] timeValues = inState.getCharSequenceArray("timeValues");
+            if (timeKeys == null || timeValues == null || timeKeys.length == 0) {
+                selectedTimePref.setSummary("Select desired time above");
+                return;
+            }
+            selectedTimePref.setEntries(timeKeys);
+            selectedTimePref.setEntryValues(timeValues);
+            CharSequence selectedSummary = inState.getCharSequence("selectedSummary");
+            if(selectedSummary != null) {
+                selectedTimePref.setSummary(selectedSummary);
+            }
         }
     }
 
@@ -75,10 +108,13 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 	{
 		return excludedPreferences;
 	}
-	
+
 	protected void updatePreferenceSummary(Preference pref) {
 		if (pref == null || pref instanceof TwoStatePreference || excludedPreferences.contains(pref.getKey())) {
-			// do nothing
+            if(pref != null) {
+                Log.d("PreferenceWithSummaryFragment", "Skipping pref with key: " + pref.getKey());
+            }
+			return;
 		}
 		else if (pref instanceof PreferenceGroup) {
 			PreferenceGroup prefGroup = (PreferenceGroup)pref;
