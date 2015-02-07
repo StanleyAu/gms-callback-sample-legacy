@@ -12,7 +12,7 @@
         android:title="Last name" />
     <EditTextPreference
         android:inputType="textNoSuggestions"
-        android:key="gms_user"
+        android:key="@string/key_property_gms_user"
         android:singleLine="true"
         android:title="Username" />
     <EditTextPreference

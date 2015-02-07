@@ -1,4 +1,4 @@
-package com.genesys.gms.mobile.callback.demo.legacy.data.events;
+package com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm;
 
 import java.io.IOException;
 

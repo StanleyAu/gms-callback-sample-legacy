@@ -6,7 +6,9 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.ApiModule;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
 import com.genesys.gms.mobile.callback.demo.legacy.data.gson.DateTimeTypeAdapter;
+import com.genesys.gms.mobile.callback.demo.legacy.data.gson.TranscriptEntryTypeAdapter;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -52,6 +54,7 @@ public class DataModule {
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
             .setDateFormat(UTC_DATE_FORMAT)
             .registerTypeAdapter(DateTime.class, new DateTimeTypeAdapter())
+            .registerTypeAdapter(TranscriptEntry.class, new TranscriptEntryTypeAdapter())
             .setPrettyPrinting()
             .create();
     }

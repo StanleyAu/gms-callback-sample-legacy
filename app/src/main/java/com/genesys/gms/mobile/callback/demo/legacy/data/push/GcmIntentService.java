@@ -2,7 +2,7 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.push;
 
 import android.app.IntentService;
 import android.content.Intent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.GcmReceiveEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.GcmReceiveEvent;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import de.greenrobot.event.EventBus;
 
@@ -39,7 +39,7 @@ public class GcmIntentService extends IntentService {
                 // Send to Activity via Bus (attn to threading)
             }
         }
-        bus.post(event);
+        bus.postSticky(event);
 
         GcmBroadcastReceiver.completeWakefulIntent(intent);
     }

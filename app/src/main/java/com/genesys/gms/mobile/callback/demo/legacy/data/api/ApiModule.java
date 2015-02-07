@@ -1,12 +1,17 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import android.content.SharedPreferences;
+import android.util.Log;
+import com.genesys.gms.mobile.callback.demo.legacy.BuildConfig;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
+import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsRequestInterceptor;
 import com.genesys.gms.mobile.callback.demo.legacy.ui.Globals;
 import com.google.gson.Gson;
 import com.squareup.okhttp.OkHttpClient;
 import dagger.Module;
 import dagger.Provides;
+import retrofit.Endpoint;
+import retrofit.RequestInterceptor;
 import retrofit.RestAdapter;
 import retrofit.client.Client;
 import retrofit.client.OkClient;
@@ -43,17 +48,35 @@ public class ApiModule {
     }
 
     @Provides @Singleton
+    GmsRequestInterceptor provideRequestInterceptor(SharedPreferences sharedPreferences) {
+        GmsRequestInterceptor gmsRequestInterceptor = new GmsRequestInterceptor();
+        String gmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
+        gmsRequestInterceptor.setGmsUser(gmsUser);
+        return new GmsRequestInterceptor();
+    }
+
+    @Provides @Singleton
     Client provideClient(OkHttpClient client) {
         return new OkClient(client);
     }
 
     @Provides @Singleton
-    RestAdapter provideRestAdapter(GmsEndpoint endpoint, Client client, Gson gson) {
-        return new RestAdapter.Builder()
+    RestAdapter provideRestAdapter(GmsEndpoint endpoint, GmsRequestInterceptor requestInterceptor, Client client, Gson gson) {
+        RestAdapter.Builder builder = new RestAdapter.Builder()
             .setClient(client)
             .setEndpoint(endpoint)
-            .setConverter(new GsonConverter(gson))
-            .build();
+            .setRequestInterceptor(requestInterceptor)
+            .setConverter(new GsonConverter(gson));
+        if(BuildConfig.DEBUG) {
+            builder.setLogLevel(RestAdapter.LogLevel.FULL)
+                .setLog(new RestAdapter.Log() {
+                    @Override
+                    public void log(String msg) {
+                        Log.d("Retrofit", msg);
+                    }
+                });
+        }
+        return builder.build();
     }
 
     @Provides @Singleton

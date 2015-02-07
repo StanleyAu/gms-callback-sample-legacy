@@ -7,9 +7,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
-import com.genesys.gms.mobile.callback.demo.legacy.data.async.GcmRegisterAsync;
-import com.genesys.gms.mobile.callback.demo.legacy.data.async.GcmUnregisterAsync;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.*;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -18,12 +16,14 @@ import de.greenrobot.event.NoSubscriberEvent;
 import hugo.weaving.DebugLog;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by stau on 30/11/2014.
  */
-
+@Singleton
 public class GcmManager {
     private final GoogleCloudMessaging googleCloudMessaging;
     private final EventBus bus;
@@ -40,9 +40,7 @@ public class GcmManager {
     // private static final long[] VIBRATE_PATTERN = {350L, 200L, 350L};
     public static final String GCM_NOTIFICATION_ID = "gcm_notification_id";
 
-    private Object savedEvent;
-
-    @Inject @DebugLog
+    @Inject
     public GcmManager(GoogleCloudMessaging googleCloudMessaging, SharedPreferences sharedPreferences, @ForApplication Context context) {
         this.googleCloudMessaging = googleCloudMessaging;
         this.bus = EventBus.getDefault();
@@ -51,7 +49,7 @@ public class GcmManager {
     }
 
     @DebugLog
-    public void onEvent(GcmRegisterEvent event) {
+    public void onEventAsync(GcmRegisterEvent event) {
         if( !checkPlayServices() ) {
             // Google Play Services not available
             bus.post(new GcmErrorEvent(null));
@@ -67,13 +65,22 @@ public class GcmManager {
                 bus.post(new GcmUnregisterEvent(event.senderId));
             }
         } else {
-            GcmRegisterAsync async = new GcmRegisterAsync(googleCloudMessaging, event.senderId);
-            async.execute();
+            String result = null;
+            try {
+                result = googleCloudMessaging.register(event.senderId);
+            } catch(IOException e) {
+                bus.post(new GcmErrorEvent(e));
+            }
+            if (result != null && !result.isEmpty()) {
+                bus.post(new GcmRegisterDoneEvent(result, event.senderId));
+            } else {
+                // Unknown issue
+            }
         }
     }
 
     @DebugLog
-    public void onEvent(GcmUnregisterEvent event) {
+    public void onEventAsync(GcmUnregisterEvent event) {
         //Timber.i("Handling GCM unregister request: " + event.toString());
         if( !checkPlayServices() ) {
             bus.post(new GcmErrorEvent(null));
@@ -88,8 +95,12 @@ public class GcmManager {
                 bus.post(new GcmRegisterEvent(event.strNewSenderId));
             }
         } else {
-            GcmUnregisterAsync async = new GcmUnregisterAsync(googleCloudMessaging, event.strNewSenderId);
-            async.execute();
+            try {
+                googleCloudMessaging.unregister();
+            } catch (IOException e) {
+                bus.post(new GcmErrorEvent(e));
+            }
+            bus.post(new GcmUnregisterDoneEvent(event.strNewSenderId));
         }
     }
 
@@ -119,8 +130,7 @@ public class GcmManager {
     public void onEvent(NoSubscriberEvent event) {
         CharSequence message = "Message received!";
         if(event.originalEvent instanceof GcmReceiveEvent) {
-            savedEvent = event.originalEvent;
-            CharSequence extraMessage = ((GcmReceiveEvent) savedEvent).extras.getCharSequence("message");
+            CharSequence extraMessage = ((GcmReceiveEvent) event.originalEvent).extras.getCharSequence("message");
             if(extraMessage != null) {
                 message = extraMessage;
             }

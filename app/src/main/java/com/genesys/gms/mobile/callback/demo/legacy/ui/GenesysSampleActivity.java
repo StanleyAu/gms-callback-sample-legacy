@@ -4,7 +4,11 @@ import android.app.DialogFragment;
 import android.preference.*;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.*;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackAvailabilityDoneEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackErrorEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartDoneEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
@@ -97,7 +101,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 		// TODO: When desired_date changes, start async task to update time_slots
 		if (key.equals("scenario"))
 		{
-			checkDesiredTimeEnabled();
+			checkDesiredTimeEnabled(callbackFragment);
 		}
 		else if (key.equals("desired_time"))
 		{
@@ -172,7 +176,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     // Hack to deal with convoluted lifecycles (until this is reorganized)
     @DebugLog
     public void onFragmentResume(PreferenceFragment fragment) {
-        checkDesiredTimeEnabled();
+        checkDesiredTimeEnabled(fragment);
     }
     @DebugLog
     public void onFragmentPause(PreferenceFragment fragment) {
@@ -180,9 +184,8 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     }
 
     @DebugLog
-	protected void checkDesiredTimeEnabled()
+	protected void checkDesiredTimeEnabled(PreferenceFragment callbackFragment)
 	{
-		PreferenceFragment callbackFragment = (PreferenceFragment)tabs[0].fragment;
 		Preference desiredTime = (Preference)callbackFragment.findPreference("desired_time");
 		Preference selectedTime = (Preference)callbackFragment.findPreference("selected_time");
 		if(desiredTime==null || selectedTime == null)
@@ -204,7 +207,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-        boolean result = false;
+        boolean result;
 	    MenuInflater inflater = getMenuInflater();
 	    inflater.inflate(R.menu.sample_general_actions, menu);
         result = super.onCreateOptionsMenu(menu);
@@ -265,7 +268,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     /** EVENT HANDLERS ARE HERE **/
 
     @DebugLog
-    public void onEvent(GcmRegisterDoneEvent event) {
+    public void onEventMainThread(GcmRegisterDoneEvent event) {
         // Because the PreferenceFragment is being used, simple things like
         // toggling Enabled is ugly.
         Toast.makeText(this, "GCM Registered!", Toast.LENGTH_SHORT).show();
@@ -279,8 +282,9 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     }
 
     @DebugLog
-    public void onEvent(GcmUnregisterDoneEvent event) {
+    public void onEventMainThread(GcmUnregisterDoneEvent event) {
         if(event.isPendingWork()) {
+            // Can use EventBus priorities to cancel this in GcmManager
             return;
         }
         Toast.makeText(this, "GCM Unregistered!", Toast.LENGTH_SHORT).show();
@@ -294,7 +298,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     }
 
     @DebugLog
-    public void onEvent(GcmErrorEvent event) {
+    public void onEventMainThread(GcmErrorEvent event) {
         Toast.makeText(this, "GCM Error!", Toast.LENGTH_SHORT).show();
         log.debug("GCM Error encountered: " + event.error);
         PreferenceFragment settingsFragment = (PreferenceFragment)tabs[1].fragment;
@@ -307,7 +311,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         }
     }
 
-    public void onEvent(CallbackStartDoneEvent event) {
+    public void onEventMainThread(CallbackStartDoneEvent event) {
         log.debug(event.toString());
         MenuItem item = menu.findItem(R.id.connect);
         if(item != null) {
@@ -315,7 +319,12 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         }
         controller.handleDialog(event.callbackDialog);
     }
-    public void onEvent(CallbackErrorEvent event) {
+
+    public void onEventMainThread(CallbackAvailabilityDoneEvent event) {
+        controller.updateTimeSlots(this, event.availability);
+    }
+
+    public void onEventMainThread(CallbackErrorEvent event) {
         log.warn(event.toString());
         MenuItem item = menu.findItem(R.id.connect);
         if(item != null) {
@@ -327,7 +336,8 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         }
         Toast.makeText(this, exceptionMessage, Toast.LENGTH_SHORT).show();
     }
-    public void onEvent(UnknownError event) {
+
+    public void onEventMainThread(UnknownErrorEvent event) {
         log.error(event.toString());
         MenuItem item = menu.findItem(R.id.connect);
         if(item != null) {

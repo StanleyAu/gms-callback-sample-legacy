@@ -1,5 +1,7 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.gson;
 
+import android.util.Log;
+import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -14,16 +16,13 @@ import java.io.IOException;
  * Created by stau on 02/11/2014.
  */
 public class DateTimeTypeAdapter extends TypeAdapter<DateTime> {
-    @Inject
-    DateTimeFormatter dateTimeFormatter;
-
     @Override
     public void write(JsonWriter out, DateTime value) throws IOException {
         if(value == null){
             out.nullValue();
             return;
         }
-        out.value(dateTimeFormatter.print(value));
+        out.value(TimeHelper.serializeUTCTime(value));
     }
 
     @Override
@@ -32,6 +31,6 @@ public class DateTimeTypeAdapter extends TypeAdapter<DateTime> {
             in.nextNull();
             return null;
         }
-        return dateTimeFormatter.parseDateTime(in.nextString());
+        return TimeHelper.parseISO8601DateTime(in.nextString());
     }
 }

@@ -13,6 +13,7 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
 import android.preference.TwoStatePreference;
 import android.text.InputType;
+import hugo.weaving.DebugLog;
 
 // TODO: A multi-purpose generic fragment is actually more trouble than it's worth
 public class PreferenceWithSummaryFragment extends PreferenceFragment implements OnSharedPreferenceChangeListener {
@@ -26,13 +27,13 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 		return f;
 	}
 
-    @Override
+    @Override @DebugLog
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
 	    addPreferencesFromResource(getArguments().getInt("preferences"));
 	}
 
-	@Override
+	@Override @DebugLog
 	public void onResume() {
 	    super.onResume();
 	    updatePreferenceSummary(getPreferenceScreen());
@@ -41,7 +42,7 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
         ((GenesysSampleActivity)getActivity()).onFragmentResume(this);
 	}
 
-	@Override
+	@Override @DebugLog
 	public void onPause() {
 	    super.onPause();
 	    getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);

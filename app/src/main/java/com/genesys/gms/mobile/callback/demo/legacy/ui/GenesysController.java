@@ -9,15 +9,12 @@ import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackDialog;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.CallbackStartEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackAvailabilityEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
-import org.apache.http.NameValuePair;
-import org.apache.http.message.BasicNameValuePair;
 import org.joda.time.*;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -42,11 +39,6 @@ public class GenesysController {
     private final Context context;
 	private final GenesysService genesysService;
     private final EventBus bus;
-
-	// TODO: Move code to utility class
-	final private static String ISO8601_FORMAT = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'SSS'Z'";
-	final private static DateTimeFormatter ISO8601_FORMATTER = DateTimeFormat.forPattern(ISO8601_FORMAT).withZone(DateTimeZone.UTC);
-	
 	private String sessionId;
 
     @DebugLog
@@ -125,17 +117,10 @@ public class GenesysController {
             null, // _request_queue_time_stat
             params
         ));
-
-        /*
-        blah blah blah
-		
-		genesysService.startSession(serverUrl, urlPath, serviceName, gmsUser, params, registerCloudMessaging, useCallbackInterface);
-		*/
 	}
 
     public void handleDialog(CallbackDialog dialog) {
-        CallbackDialog myDialog = (CallbackDialog) dialog;
-        switch(myDialog.getAction()) {
+        switch(dialog.getAction()) {
             case DIAL:
                 String telUri = dialog.getTelUrl();
                 String label = dialog.getLabel();
@@ -143,8 +128,42 @@ public class GenesysController {
                 makeCall(context, Uri.parse(telUri));
                 break;
             case MENU:
+                if(dialog.getContent() == null || dialog.getContent().size() == 0) {
+                    // It's empty! No menu to show...
+                    break;
+                }
+                CallbackDialog.DialogGroup group = dialog.getContent().get(0);
+                String groupName = group.getGroupName();
+                final List<CallbackDialog.GroupContent> groupContents = group.getGroupContent();
+                if(groupContents == null || groupContents.size() == 0) {
+                    // It's empty! There are no options...
+                    break;
+                }
+                String[] menuItems = new String[groupContents.size()];
+                for (int i = 0; i < groupContents.size(); i++) {
+                    menuItems[i] = groupContents.get(i).getLabel();
+                }
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setTitle(dialog.getLabel() + "\n" + groupName)
+                    .setItems(menuItems, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            String label = groupContents.get(which).getLabel();
+                            String url = groupContents.get(which).getUserActionUrl();
+                            Log.i("GenesysController", "User selected option [" + label + "]: " + url);
+                            // This just means POST
+                            genesysService.continueDialog(url);
+                        }
+                    });
+                builder.create().show();
                 break;
             case CHAT:
+                Intent intent = new Intent(context, GenesysChatActivity.class);
+                intent.setAction(Globals.ACTION_GENESYS_START_CHAT);
+                intent.putExtra(Globals.EXTRA_CHAT_URL, dialog.getStartChatUrl());
+                intent.putExtra(Globals.EXTRA_COMET_URL, dialog.getCometUrl());
+                intent.putExtra(Globals.EXTRA_SUBJECT, dialog.getChatParameters().getSubject());
+                context.startActivity(intent);
                 break;
             case CONFIRM:
                 String text = dialog.getText();
@@ -190,11 +209,7 @@ public class GenesysController {
 	}
 	
 	private void interpretResponse(Context context, JSONObject response, RequestType type) throws JSONException {
-		if (type == RequestType.AVAILABILITY)
-		{
-			updateTimeSlots(context, response);
-		}
-		else if (response.has("error")) {
+		if (response.has("error")) {
 			showError(context, response.getString("error"));
 		}
 		else {
@@ -277,20 +292,83 @@ public class GenesysController {
 		}
 	}
 	
-	public void requestTimeSlots(String serviceName, String desiredTime)
-	{
-		DateTime desiredDateTime = ISO8601_FORMATTER.parseDateTime(desiredTime);
-		DateTime startBound = desiredDateTime.minusHours(5);
-		DateTime endBound = desiredDateTime.plusHours(5);
-		List<NameValuePair> params = new ArrayList<NameValuePair>();
-		params.add(new BasicNameValuePair("start",startBound.toString(ISO8601_FORMAT)));
-		params.add(new BasicNameValuePair("end",endBound.toString(ISO8601_FORMAT)));
-		Log.d("requestTimeSlots()", "Availability params: " + params);
-		genesysService.post("/callback/" + serviceName + "/availability", params, RequestType.AVAILABILITY);
+	public void requestTimeSlots(String serviceName, String desiredTime) {
+        DateTime desiredDateTime = TimeHelper.parseISO8601DateTime(desiredTime);
+        DateTime startBound = desiredDateTime.minusHours(5);
+        DateTime endBound = desiredDateTime.plusHours(5);
+        bus.post(new CallbackAvailabilityEvent(serviceName, startBound, null, endBound, null));
 	}
 	
-	public void updateTimeSlots(Context context, JSONObject response)
+	public void updateTimeSlots(Context context, Map<DateTime, Integer> availability)
 	{
+        GenesysSampleActivity activity = (GenesysSampleActivity)context;
+        PreferenceFragment callbackFragment = (PreferenceFragment)activity.tabs[0].fragment;
+        ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
+        List<Pair<String,String>> newEntries = new ArrayList<Pair<String,String>>();
+
+        DateTime timeSlot;
+        Integer availableSlot;
+        String friendlyTime;
+        String strTimeSlot;
+
+        for(Map.Entry<DateTime, Integer> entry : availability.entrySet()) {
+            timeSlot = entry.getKey();
+            availableSlot = entry.getValue();
+            if(entry.getKey().isBeforeNow()) {
+                continue;
+            }
+            if(entry.getValue() != null && entry.getValue() > 0) {
+                friendlyTime = TimeHelper.toFriendlyString(timeSlot);
+                strTimeSlot = TimeHelper.serializeUTCTime(timeSlot);
+                newEntries.add(new Pair<String, String>(
+                    friendlyTime, strTimeSlot
+                ));
+            }
+        }
+        if(newEntries.size()==0)
+        {
+            selectedTime.setSummary("No time slots available");
+            selectedTime.setEntries(R.array.empty);
+            selectedTime.setEntryValues(R.array.empty);
+        } else {
+            String desiredTime;
+            int closestTimeIndex;
+            int firstIndex;
+            int lastIndex;
+            int availableEntries;
+            final int AVAILABLE_OPTIONS = 5;
+            selectedTime.setSummary("Tap to select");
+            Collections.sort(newEntries, new Comparator<Pair<String,String>>() {
+                @Override
+                public int compare(Pair<String,String> pair1, Pair<String,String> pair2)
+                {
+                    return pair1.second.compareTo(pair2.second);
+                }
+            });
+
+            // binary search
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+            desiredTime = sharedPreferences.getString("desired_time", null);
+            closestTimeIndex = findClosestTime(newEntries, desiredTime);
+            firstIndex = Math.max(closestTimeIndex - AVAILABLE_OPTIONS / 2, 0);
+            lastIndex = Math.min(closestTimeIndex + AVAILABLE_OPTIONS / 2, newEntries.size() - 1);
+            availableEntries = lastIndex - firstIndex + 1;
+            Log.d("updateTimeSlots()", "closestTimeIndex: " + closestTimeIndex + " firstIndex: " + firstIndex + " lastIndex: " + lastIndex);
+
+            CharSequence[] entriesList = new CharSequence[availableEntries];
+            CharSequence[] entryValuesList = new CharSequence[availableEntries];
+            int i = 0;
+            for(int j=firstIndex;j<=lastIndex;++j)
+            {
+                entriesList[i] = newEntries.get(j).first;
+                entryValuesList[i] = newEntries.get(j).second;
+                ++i;
+            }
+            selectedTime.setEntries(entriesList);
+            selectedTime.setEntryValues(entryValuesList);
+        }
+        selectedTime.setEnabled(true);
+        /*
 		if(!(context instanceof GenesysSampleActivity))
 		{
 			return;
@@ -324,83 +402,7 @@ public class GenesysController {
 			selectedTime.setEntries(R.array.empty);
 			selectedTime.setEntryValues(R.array.empty);
 		}
-		else
-		{
-			List<Pair<String,String>> newEntries = new ArrayList<Pair<String,String>>();
-			@SuppressWarnings("unchecked")
-			Iterator<String> keys = response.keys();
-			String timeSlot;
-			DateTime timeSlotAsDateTime;
-			int availableSlots = 0;
-			while(keys.hasNext())
-			{
-				timeSlot = keys.next();
-				timeSlotAsDateTime = TimeHelper.parseISO8601DateTime(timeSlot);
-				if(timeSlotAsDateTime.isBeforeNow()) {
-					// Filter out timeslots that have already passed
-					continue;
-				}
-				try
-				{
-					availableSlots = response.getInt(timeSlot);
-					if(availableSlots>0)
-					{
-						newEntries.add(new Pair<String,String>(
-								TimeHelper.toFriendlyString(timeSlot), timeSlot
-								));
-					}
-				}
-				catch(JSONException exc)
-				{
-					showError(context, exc.getMessage());
-				}
-			}
-			if(newEntries.size()==0)
-			{
-				selectedTime.setSummary("No time slots available");
-				selectedTime.setEntries(R.array.empty);
-				selectedTime.setEntryValues(R.array.empty);
-			}
-			else
-			{
-				String desiredTime;
-				int closestTimeIndex;
-				int firstIndex;
-				int lastIndex;
-				int availableEntries;
-				final int AVAILABLE_OPTIONS = 5;
-				selectedTime.setSummary("Tap to select");
-				Collections.sort(newEntries, new Comparator<Pair<String,String>>() {
-					@Override
-					public int compare(Pair<String,String> pair1, Pair<String,String> pair2)
-					{
-						return pair1.second.compareTo(pair2.second);
-					}
-				});
-
-				// binary search
-				SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-				desiredTime = sharedPreferences.getString("desired_time", null);
-				closestTimeIndex = findClosestTime(newEntries, desiredTime);
-				firstIndex = Math.max(closestTimeIndex - AVAILABLE_OPTIONS / 2, 0);
-				lastIndex = Math.min(closestTimeIndex + AVAILABLE_OPTIONS / 2, newEntries.size() - 1);
-				availableEntries = lastIndex - firstIndex + 1;
-				Log.d("updateTimeSlots()", "closestTimeIndex: " + closestTimeIndex + " firstIndex: " + firstIndex + " lastIndex: " + lastIndex);
-
-				CharSequence[] entriesList = new CharSequence[availableEntries];
-				CharSequence[] entryValuesList = new CharSequence[availableEntries];
-				int i = 0;
-				for(int j=firstIndex;j<=lastIndex;++j)
-				{
-					entriesList[i] = newEntries.get(j).first;
-					entryValuesList[i] = newEntries.get(j).second;
-					++i;
-				}
-				selectedTime.setEntries(entriesList);
-				selectedTime.setEntryValues(entryValuesList);
-			}
-		}
-		selectedTime.setEnabled(true);
+		*/
 	}
 
 	private int findClosestTime(List<Pair<String, String>> availableTimes, String desiredTime) {

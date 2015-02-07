@@ -33,6 +33,7 @@ public class Globals {
     public static final String PROPERTY_HOST = "com.genesys.gms.mobile.callback.demo.legacy.property.Host";
     public static final String PROPERTY_PORT = "com.genesys.gms.mobile.callback.demo.legacy.property.Port";
     public static final String PROPERTY_API_VERSION = "com.genesys.gms.mobile.callback.demo.legacy.property.ApiVersion";
+    public static final String PROPERTY_GMS_USER = "com.genesys.gms.mobile.callback.demo.legacy.property.GMSUser";
 
 	public static void setupLogging(ContextWrapper context) {
 		BasicLogcatConfigurator.configureDefaultContext();

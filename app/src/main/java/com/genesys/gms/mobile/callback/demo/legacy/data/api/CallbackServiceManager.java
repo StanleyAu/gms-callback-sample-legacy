@@ -2,7 +2,9 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.*;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.*;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
+import com.squareup.okhttp.OkHttpClient;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 import org.joda.time.DateTime;
@@ -12,7 +14,6 @@ import retrofit.client.Response;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.sql.Time;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +24,13 @@ import java.util.Map;
 @Singleton
 public class CallbackServiceManager {
     private final CallbackService callbackService;
+    private final OkHttpClient httpClient;
     private final EventBus bus;
 
     @DebugLog @Inject
-    public CallbackServiceManager(CallbackService callbackService) {
+    public CallbackServiceManager(CallbackService callbackService, OkHttpClient httpClient) {
         this.callbackService = callbackService;
+        this.httpClient = httpClient;
         this.bus = EventBus.getDefault();
     }
 
@@ -57,9 +60,8 @@ public class CallbackServiceManager {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
                     }
-                } catch (RuntimeException ex) {
-                    bus.post(new UnknownErrorEvent(error));
-                }
+                } catch (Exception e) {;}
+                bus.post(new UnknownErrorEvent(error));
             }
         });
     }
@@ -78,9 +80,8 @@ public class CallbackServiceManager {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
                     }
-                } catch (RuntimeException ex) {
-                    bus.post(new UnknownErrorEvent(error));
-                }
+                } catch (Exception e) {;}
+                bus.post(new UnknownErrorEvent(error));
             }
         });
     }
@@ -107,9 +108,8 @@ public class CallbackServiceManager {
                         CallbackRescheduleException body = (CallbackRescheduleException) error.getBodyAs(CallbackRescheduleException.class);
                         bus.post(new CallbackRescheduleErrorEvent(body));
                     }
-                } catch (RuntimeException ex) {
-                    bus.post(new UnknownErrorEvent(error));
-                }
+                } catch (Exception e) {;}
+                bus.post(new UnknownErrorEvent(error));
             }
         });
     }
@@ -133,13 +133,13 @@ public class CallbackServiceManager {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
                     }
-                } catch (RuntimeException ex) {
-                    bus.post(new UnknownErrorEvent(error));
-                }
+                } catch (Exception e) {;}
+                bus.post(new UnknownErrorEvent(error));
             }
         });
     }
 
+    @DebugLog
     public void onEvent(CallbackAvailabilityEvent event) {
         callbackService.queryAvailability(
             event.serviceName,
@@ -153,16 +153,15 @@ public class CallbackServiceManager {
                     bus.post(new CallbackAvailabilityDoneEvent(dateTimeIntegerMap));
                 }
 
-                @Override
+                @Override @DebugLog
                 public void failure(RetrofitError error) {
                     try {
                         if (error.getResponse() != null) {
                             CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                             bus.post(new CallbackErrorEvent(body));
                         }
-                    } catch (RuntimeException ex) {
-                        bus.post(new UnknownErrorEvent(error));
-                    }
+                    } catch (Exception e) {;}
+                    bus.post(new UnknownErrorEvent(error));
                 }
             }
         );
@@ -187,10 +186,15 @@ public class CallbackServiceManager {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
                     }
-                } catch (RuntimeException ex) {
-                    bus.post(new UnknownErrorEvent(error));
-                }
+                } catch (Exception e) {;}
+                bus.post(new UnknownErrorEvent(error));
             }
         });
     }
+
+    /*
+    public void onEvent() {
+        // for check-queue-position and menuItem URLs
+    }
+    */
 }
