@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import android.util.Log;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import hugo.weaving.DebugLog;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;

@@ -11,6 +11,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackDialog;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackAvailabilityEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;

@@ -13,6 +13,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.Callback
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartDoneEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 import org.slf4j.Logger;

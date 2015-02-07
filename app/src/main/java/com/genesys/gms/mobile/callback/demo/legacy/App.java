@@ -3,7 +3,7 @@ package com.genesys.gms.mobile.callback.demo.legacy;
 import android.app.Application;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackServiceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
-import com.genesys.gms.mobile.callback.demo.legacy.ui.Globals;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
 

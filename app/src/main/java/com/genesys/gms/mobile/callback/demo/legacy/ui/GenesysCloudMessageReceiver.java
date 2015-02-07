@@ -1,5 +1,6 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

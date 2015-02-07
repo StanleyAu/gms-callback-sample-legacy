@@ -32,6 +32,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.client.ChatEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatListener;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatSession;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatCreationParameters;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 
 public class GenesysChatActivity extends AbstractGenesysActivity {
 	
