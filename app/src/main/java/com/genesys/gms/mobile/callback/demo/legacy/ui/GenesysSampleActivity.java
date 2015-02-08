@@ -7,13 +7,15 @@ import android.support.v4.app.Fragment;
 import android.support.v4.preference.PreferenceFragment;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackAvailabilityDoneEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackErrorEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartDoneEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
+import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsRequestInterceptor;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 import org.slf4j.Logger;
@@ -37,7 +39,9 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 
     @Inject SharedPreferences sharedPreferences;
     @Inject GmsEndpoint gmsEndpoint;
-	private GenesysController controller;
+    @Inject GmsRequestInterceptor gmsRequestInterceptor;
+    @Inject Gson gson;
+	@Inject GenesysController controller;
     private final EventBus bus;
     private Menu menu;
 
@@ -81,12 +85,12 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 		PreferenceFragment callbackFragment = (PreferenceFragment)this.getFragment(0);
         PreferenceFragment settingsFragment = (PreferenceFragment)this.getFragment(1);
 		// TODO: When desired_date changes, start async task to update time_slots
-		if (key.equals("scenario"))
-		{
+		if (key.equals("scenario")) {
 			checkDesiredTimeEnabled(callbackFragment);
-		}
-		else if (key.equals("desired_time"))
-		{
+		} else if (key.equals(Globals.PROPERTY_GMS_USER)) {
+            String strGmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
+            gmsRequestInterceptor.setGmsUser(strGmsUser);
+        } else if (key.equals("desired_time")) {
             Preference desiredTimePref = callbackFragment.findPreference("desired_time");
             if(desiredTimePref == null) {
                 return;
@@ -107,9 +111,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
                     Toast.makeText(this, "Updating time slots...", Toast.LENGTH_SHORT).show();
                 }
             }
-		}
-		else if (key.equals("selected_time"))
-		{
+		} else if (key.equals("selected_time")) {
 			ListPreference selectedTimePref = (ListPreference)callbackFragment.findPreference("selected_time");
 			if(selectedTimePref == null) {
                 return;
@@ -119,8 +121,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 				CharSequence value = selectedTimePref.getEntry();
 				selectedTimePref.setSummary(value == null || value.length() == 0 ? "[nothing selected]" : value);
 			}
-		}
-        else if (key.equals(Globals.PROPERTY_HOST) ||
+		} else if (key.equals(Globals.PROPERTY_HOST) ||
                     key.equals(Globals.PROPERTY_PORT) ||
                     key.equals(Globals.PROPERTY_API_VERSION)) {
             tryUpdateEndpoint();
@@ -159,7 +160,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	    super.onResume();
         bus.register(this);
 	    sharedPreferences.registerOnSharedPreferenceChangeListener(this);
-        // TODO: Why can't we check whether or not to enable scheduled callback fields here?
+        // NTS: Can't checkDesiredTimeEnabled here because Preference init occurs later
 	}
 
     @Override @DebugLog
@@ -176,7 +177,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     }
     @DebugLog
     public void onFragmentPause(PreferenceFragment fragment) {
-
+        // Nothing to do here
     }
 
     @DebugLog
@@ -288,7 +289,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
                 } else {
                     Toast.makeText(this, "Connecting...", Toast.LENGTH_SHORT).show();
                     log.debug("Preparing Callback Start Service request...");
-                    controller.connect(this);
+                    controller.connect();
                     item.setEnabled(false);
                 }
             }
@@ -299,8 +300,11 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 		} else if(item.getItemId()==R.id.refresh_queue) {
             if(!gmsEndpoint.isUrlSet()) {
                 Toast.makeText(this, "Server settings not configured!", Toast.LENGTH_SHORT).show();
+                log.debug("GMS Endpoint is not initialized.");
             } else {
-                controller.refreshQueue();
+                // TODO: Provide session management, tracking.
+                controller.checkQueuePosition("foobar");
+                item.setEnabled(false);
             }
 			return true;
 		} else if(item.getItemId()==R.id.about) {
@@ -309,18 +313,6 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 			return true;
 	    }
         return true;
-	}
-
-    @Override @DebugLog
-    protected void onGenesysServiceConnected(GenesysService genesysService) {
-        controller = new GenesysController(this, genesysService, bus);
-    }
-	
-	@Override
-	protected void handleIntent(Intent intent) {
-		if (controller != null) {
-            controller.handleIntent(this, intent);
-        }
 	}
 
     /** EVENT HANDLERS ARE HERE **/
@@ -369,8 +361,8 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         }
     }
 
+    @DebugLog
     public void onEventMainThread(CallbackStartDoneEvent event) {
-        log.debug(event.toString());
         MenuItem item = menu.findItem(R.id.connect);
         if(item != null) {
             item.setEnabled(true);
@@ -379,7 +371,28 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     }
 
     public void onEventMainThread(CallbackAvailabilityDoneEvent event) {
-        controller.updateTimeSlots(this, event.availability);
+        controller.updateTimeSlots(event.availability);
+    }
+
+    @DebugLog
+    public void onEventMainThread(CallbackDialogDoneEvent event) {
+        if(event.success) {
+            controller.handleDialog(event.callbackDialog);
+        }
+        // TODO: Otherwise, show error
+        Toast.makeText(this, "Unknown dialog error, check logs.", Toast.LENGTH_SHORT).show();
+    }
+
+    @DebugLog
+    public void onEventMainThread(CallbackCheckQueueDoneEvent event) {
+        MenuItem item = menu.findItem(R.id.refresh_queue);
+        if(item != null) {
+            item.setEnabled(true);
+        }
+        if(event.success) {
+            controller.updateQueuePosition(event.callbackQueuePosition);
+        }
+        // TODO: Otherwise, show error
     }
 
     public void onEventMainThread(CallbackErrorEvent event) {
@@ -393,6 +406,23 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
             return;
         }
         Toast.makeText(this, exceptionMessage, Toast.LENGTH_SHORT).show();
+    }
+
+    public void onEventMainThread(GcmReceiveEvent event) {
+        String gcmMessage = event.extras.getString("message");
+        if(gcmMessage == null || gcmMessage.isEmpty()) {
+            // There is no message.
+            return;
+        }
+        GcmSyncMessage gcmSyncMessage = null;
+        try {
+            gcmSyncMessage = gson.fromJson(gcmMessage, GcmSyncMessage.class);
+        } catch (JsonSyntaxException e) {
+            // Failed to parse cloud message, can't interpret
+        }
+        if(gcmSyncMessage != null) {
+            controller.handleGcmMessage(gcmSyncMessage);
+        }
     }
 
     public void onEventMainThread(UnknownErrorEvent event) {

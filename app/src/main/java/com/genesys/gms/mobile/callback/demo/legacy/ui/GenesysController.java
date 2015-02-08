@@ -3,26 +3,25 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 import java.util.*;
 
 import android.preference.ListPreference;
-import android.preference.PreferenceManager;
 import android.support.v4.preference.PreferenceFragment;
 import android.util.Log;
+import com.genesys.gms.mobile.callback.demo.legacy.ForActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackDialog;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackQueuePosition;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackAvailabilityEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackCheckQueueEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackDialogEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
+import com.squareup.okhttp.OkHttpClient;
 import de.greenrobot.event.EventBus;
-import hugo.weaving.DebugLog;
 import org.joda.time.*;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysService.RequestType;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -34,25 +33,23 @@ import android.net.Uri;
 import android.util.Pair;
 import android.widget.Toast;
 
+import javax.inject.Inject;
+
 public class GenesysController {
 
 	private final Logger log = LoggerFactory.getLogger(Globals.GENESYS_LOG_TAG);
     private final Context context;
-	private final GenesysService genesysService;
+    private final SharedPreferences sharedPreferences;
     private final EventBus bus;
-	private String sessionId;
 
-    @DebugLog
-	public GenesysController(Context context, GenesysService genesysService, EventBus bus) {
-		//this.sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        //The GenesysService is literally only used for HTTP, must be deprecated
+    @Inject
+	public GenesysController(@ForActivity Context context, SharedPreferences sharedPreferences) {
         this.context = context;
-		this.genesysService = genesysService;
-        this.bus = bus;
+        this.sharedPreferences = sharedPreferences;
+        this.bus = EventBus.getDefault();
 	}
 
-	public void connect(Context context) {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+	public void connect() {
         Map<String, String> params = new HashMap<String, String>();
         String strDesiredTime = null;
         CallbackStartEvent event = null;
@@ -126,7 +123,7 @@ public class GenesysController {
                 String telUri = dialog.getTelUrl();
                 String label = dialog.getLabel();
                 Toast.makeText(context, label, Toast.LENGTH_SHORT).show();
-                makeCall(context, Uri.parse(telUri));
+                makeCall(Uri.parse(telUri));
                 break;
             case MENU:
                 if(dialog.getContent() == null || dialog.getContent().size() == 0) {
@@ -153,7 +150,7 @@ public class GenesysController {
                             String url = groupContents.get(which).getUserActionUrl();
                             Log.i("GenesysController", "User selected option [" + label + "]: " + url);
                             // This just means POST
-                            genesysService.continueDialog(url);
+                            // genesysService.continueDialog(url);
                         }
                     });
                 builder.create().show();
@@ -174,123 +171,37 @@ public class GenesysController {
         }
     }
 
-	public void handleIntent(Context context, Intent intent) {		
-		boolean isErrorMessage = Globals.ACTION_GENESYS_ERROR_MESSAGE.equals(intent.getAction());
-		if (isErrorMessage) {
-			showError(context, intent.getStringExtra(Globals.EXTRA_MESSAGE));
-		}
-		
-		boolean isResponse = Globals.ACTION_GENESYS_RESPONSE.equals(intent.getAction());
-		boolean isCloudMessage = Globals.ACTION_GENESYS_CLOUD_MESSAGE.equals(intent.getAction());		
-		if (isResponse || isCloudMessage) {
-			String message = intent.getExtras().getString(Globals.EXTRA_MESSAGE);
-			try {
-				JSONObject messageJson = new JSONObject(message);
-				
-				if (isResponse) {
-					RequestType type = (RequestType)intent.getExtras().getSerializable(Globals.EXTRA_REQUEST_TYPE);
-					interpretResponse(context, messageJson, type);
-				}
-				else
-				{
-					interpretCloudMessage(context, messageJson);
-				}
-			} 
-			catch (Exception e) {
-				log.error("Wrong response", e);
-				showError(context, "Unexpected response from the Genesys server, see logs");
-			}
-		}
-	}
+    public void handleGcmMessage(GcmSyncMessage gcmSyncMessage) {
+        // Grab message and do post
+        bus.post(new CallbackDialogEvent(gcmSyncMessage.getSyncUrl()));
+    }
 
-	private void makeCall(Context context, Uri telUri) {
+    public void checkQueuePosition(String sessionId) {
+        bus.post(new CallbackCheckQueueEvent(sessionId));
+    }
+
+    public void updateQueuePosition(CallbackQueuePosition callbackQueuePosition) {
+        sharedPreferences.edit()
+                .putInt("queue_position", callbackQueuePosition.getPosition())
+                .putInt("queue_eta", callbackQueuePosition.getEta())
+                .putBoolean("queue_agent_ready_threshold_passed", callbackQueuePosition.isAgentReadyThresholdPassed())
+                .putInt("queue_waiting", callbackQueuePosition.getTotalWaiting())
+                .apply();
+    }
+
+	private void makeCall(Uri telUri) {
 		boolean canCall = context.checkCallingOrSelfPermission("android.permission.CALL_PHONE") == PackageManager.PERMISSION_GRANTED;
 		String action = canCall ? Intent.ACTION_CALL : Intent.ACTION_DIAL;
 		context.startActivity(new Intent(action, telUri));
 	}
-	
-	private void interpretResponse(Context context, JSONObject response, RequestType type) throws JSONException {
-		if (response.has("error")) {
-			showError(context, response.getString("error"));
-		}
-		else {
-			if (response.has("_id")) {
-				sessionId = response.getString("_id");
-			}
 
-			String action = response.optString("_action", null);
-	
-			if ("DialNumber".equals(action)) {
-				String telUri = response.getString("_tel_url");
-				makeCall(context, Uri.parse(telUri));
-			}
-			else if ("DisplayMenu".equals(action)) {
-				String label = response.getString("_label");
-				JSONArray content = response.getJSONArray("_content");
-				JSONObject group = content.getJSONObject(0);
-				String groupName = group.getString("_group_name");
-				final JSONArray groupContent = group.getJSONArray("_group_content");
-				String[] menuItems = new String[groupContent.length()];
-				for (int i = 0; i < groupContent.length(); i++) {
-					menuItems[i] = groupContent.getJSONObject(i).getString("_label");
-				}
-				
-			    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-			    builder.setTitle(label + "\n" + groupName)
-		           .setItems(menuItems, new DialogInterface.OnClickListener() {
-		               public void onClick(DialogInterface dialog, int which) {
-							try {
-								String label = groupContent.getJSONObject(which).getString("_label");
-								String url = groupContent.getJSONObject(which).getString("_user_action_url");
-								Log.i("GenesysController", "User selected option [" + label + "]: " + url);
-								genesysService.continueDialog(url);
-							} catch (JSONException e) {
-								throw new RuntimeException(e);
-							}
-		               }
-		           });
-			    builder.create().show();
-			}
-			else if ("StartChat".equals(action)) {
-				SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-				
-				Intent intent = new Intent(context, GenesysChatActivity.class);
-				intent.setAction(Globals.ACTION_GENESYS_START_CHAT);
-				intent.putExtra(Globals.EXTRA_CHAT_URL, response.getString("_start_chat_url"));
-				intent.putExtra(Globals.EXTRA_COMET_URL, response.getString("_comet_url"));
-				intent.putExtra(Globals.EXTRA_SUBJECT, response.getJSONObject("_chat_parameters").getString("subject"));
-				context.startActivity(intent);
-			}
-			else if (("ConfirmationDialog".equals(action) || action == null) && response.has("_text")) {
-				String text = response.getString("_text");
-				Toast.makeText(context, text, Toast.LENGTH_LONG).show();
-			}
-		}
-	}
-	
-	private void interpretCloudMessage(Context context, JSONObject message) throws JSONException {
-		SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-		String id = message.getString("_id");
-		String action = message.getString("_action");
-		String urlHostPort = sharedPreferences.getString("server_url", null);
-		String servicePath = sharedPreferences.getString("url_path", null);
-		String url = urlHostPort + servicePath  + id + "/" + action;
-		genesysService.continueDialog(url);
-	}
-	
-	private void showError(Context context, String errorMessage) {
+	private void showError(String errorMessage) {
 		new AlertDialog.Builder(context)
     	.setTitle("Genesys Service Error")
     	.setMessage("Received error:\n" + errorMessage)
 	    .setNeutralButton(android.R.string.ok, null)
 	    .setIcon(android.R.drawable.ic_dialog_alert)
 	    .show();
-	}
-
-	public void refreshQueue() {
-		if (sessionId != null) {
-			genesysService.post("/" + sessionId + "/check-queue-position", null);
-		}
 	}
 	
 	public void requestTimeSlots(String serviceName, String desiredTime) {
@@ -300,7 +211,7 @@ public class GenesysController {
         bus.post(new CallbackAvailabilityEvent(serviceName, startBound, null, endBound, null));
 	}
 	
-	public void updateTimeSlots(Context context, Map<DateTime, Integer> availability)
+	public void updateTimeSlots(Map<DateTime, Integer> availability)
 	{
         GenesysSampleActivity activity = (GenesysSampleActivity)context;
         PreferenceFragment callbackFragment = (PreferenceFragment)activity.getFragment(0);
@@ -356,7 +267,6 @@ public class GenesysController {
             });
 
             // binary search
-            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
             desiredTime = sharedPreferences.getString("desired_time", null);
             closestTimeIndex = findClosestTime(newEntries, desiredTime);
             firstIndex = Math.max(closestTimeIndex - AVAILABLE_OPTIONS / 2, 0);
@@ -377,41 +287,6 @@ public class GenesysController {
             selectedTime.setEntryValues(entryValuesList);
         }
         selectedTime.setEnabled(true);
-        /*
-		if(!(context instanceof GenesysSampleActivity))
-		{
-			return;
-		}
-		GenesysSampleActivity activity = (GenesysSampleActivity)context;
-		PreferenceFragment callbackFragment = (PreferenceFragment)activity.tabs[0].fragment;
-		ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
-
-		if(response.has("exception"))
-		{
-			try
-			{
-				String exception = response.getString("exception");
-				if(exception.endsWith("CallbackExceptionResource"))
-				{
-					new AlertDialog.Builder(context)
-						.setTitle("Error")
-						.setMessage("Service not configured!")
-						.setCancelable(false)
-						.setPositiveButton("Dismiss",null)
-						.show();
-					selectedTime.setSummary("No office hours found");
-				}
-				else if(exception.endsWith("CallbackExceptionAvailability"))
-				{
-					// Office closed
-					selectedTime.setSummary("Office closed at desired time");
-				}
-			}
-			catch(JSONException exc){}
-			selectedTime.setEntries(R.array.empty);
-			selectedTime.setEntryValues(R.array.empty);
-		}
-		*/
 	}
 
 	private int findClosestTime(List<Pair<String, String>> availableTimes, String desiredTime) {

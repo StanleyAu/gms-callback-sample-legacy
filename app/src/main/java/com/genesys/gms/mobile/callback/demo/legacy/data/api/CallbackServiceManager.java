@@ -1,10 +1,19 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.*;
+import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
+import com.google.gson.Gson;
+import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 import org.joda.time.DateTime;
@@ -14,6 +23,7 @@ import retrofit.client.Response;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,15 +33,29 @@ import java.util.Map;
  */
 @Singleton
 public class CallbackServiceManager {
+    public static final String GMS_USER = "gms_user";
+    public static final String CHECK_QUEUE_POSITION_SERVICE_NAME = "check-queue-position";
+    public static final MediaType FORM_ENCODED = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
+
     private final CallbackService callbackService;
+    private final GmsEndpoint gmsEndpoint;
     private final OkHttpClient httpClient;
+    private final Gson gson;
     private final EventBus bus;
+    private final SharedPreferences sharedPreferences;
 
     @DebugLog @Inject
-    public CallbackServiceManager(CallbackService callbackService, OkHttpClient httpClient) {
+    public CallbackServiceManager(CallbackService callbackService,
+                                  GmsEndpoint gmsEndpoint,
+                                  OkHttpClient httpClient,
+                                  Gson gson,
+                                  SharedPreferences sharedPreferences) {
         this.callbackService = callbackService;
+        this.gmsEndpoint = gmsEndpoint;
         this.httpClient = httpClient;
+        this.gson = gson;
         this.bus = EventBus.getDefault();
+        this.sharedPreferences = sharedPreferences;
     }
 
     public void onEvent(CallbackStartEvent event) {
@@ -59,6 +83,7 @@ public class CallbackServiceManager {
                     if (error.getResponse() != null) {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -79,6 +104,7 @@ public class CallbackServiceManager {
                     if (error.getResponse() != null) {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -107,6 +133,7 @@ public class CallbackServiceManager {
                     if (error.getResponse() != null) {
                         CallbackRescheduleException body = (CallbackRescheduleException) error.getBodyAs(CallbackRescheduleException.class);
                         bus.post(new CallbackRescheduleErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -132,6 +159,7 @@ public class CallbackServiceManager {
                     if (error.getResponse() != null) {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -159,6 +187,7 @@ public class CallbackServiceManager {
                         if (error.getResponse() != null) {
                             CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                             bus.post(new CallbackErrorEvent(body));
+                            return;
                         }
                     } catch (Exception e) {;}
                     bus.post(new UnknownErrorEvent(error));
@@ -185,6 +214,7 @@ public class CallbackServiceManager {
                     if (error.getResponse() != null) {
                         CallbackException body = (CallbackException) error.getBodyAs(CallbackException.class);
                         bus.post(new CallbackErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -192,9 +222,88 @@ public class CallbackServiceManager {
         });
     }
 
-    /*
-    public void onEvent() {
-        // for check-queue-position and menuItem URLs
+    public void onEvent(CallbackDialogEvent event) {
+        String strGmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
+        Request.Builder builder = new Request.Builder()
+                .url(event.url);
+        if(strGmsUser != null && !strGmsUser.isEmpty()) {
+            builder.addHeader(GMS_USER, strGmsUser);
+        }
+        // builder.post(RequestBody.create(FORM_ENCODED, ""));
+        Request request = builder.build();
+
+        httpClient.newCall(request).enqueue(new com.squareup.okhttp.Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+                bus.post(new CallbackDialogDoneEvent(false, null));
+            }
+
+            @Override
+            public void onResponse(com.squareup.okhttp.Response response) throws IOException {
+                boolean success = false;
+                CallbackDialog callbackDialog = null;
+                if(response.isSuccessful()) {
+                    try {
+                        callbackDialog = gson.fromJson(response.body().charStream(), CallbackDialog.class);
+                        success = true;
+                    } catch (Exception e) {
+                        Log.e("CallbackServiceManager", "Exception while parsing Dialog response: " + e);
+                    }
+                } else {
+                    Log.e("CallbackServiceManager", "Negative response for Dialog request: " + response);
+                }
+                bus.post(new CallbackDialogDoneEvent(success, callbackDialog));
+            }
+        });
     }
-    */
+
+    public void onEvent(CallbackCheckQueueEvent event) {
+        String strBaseUri = gmsEndpoint.getUrl();
+        /*
+        Uri baseUri = Uri.parse(gmsEndpoint.getUrl());
+        Uri serviceUri = Uri.withAppendedPath(
+                baseUri,
+                "service/" + event.sessionId + "/" + CHECK_QUEUE_POSITION_SERVICE_NAME
+        );
+        */
+        // TODO: Check how using the Callback interface can affect this
+        String strServiceUri = new Uri.Builder()
+                .encodedPath(strBaseUri)
+                .appendPath("service")
+                .appendPath(event.sessionId)
+                .appendPath(CHECK_QUEUE_POSITION_SERVICE_NAME)
+                .toString();
+
+        String strGmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
+        Request.Builder builder = new Request.Builder()
+                .url(strServiceUri);
+        if(strGmsUser != null && !strGmsUser.isEmpty()) {
+            builder.addHeader(GMS_USER, strGmsUser);
+        }
+        Request request = builder.build();
+
+        httpClient.newCall(request).enqueue(new com.squareup.okhttp.Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+                bus.post(new CallbackCheckQueueDoneEvent(false, null));
+            }
+
+            @Override
+            public void onResponse(com.squareup.okhttp.Response response) throws IOException {
+                boolean success = false;
+                CallbackQueuePosition callbackQueuePosition = null;
+                if(response.isSuccessful()) {
+                    try {
+                        callbackQueuePosition = gson.fromJson(response.body().charStream(), CallbackQueuePosition.class);
+                        success = true;
+                    } catch (Exception e) {
+                        Log.e("CallbackServiceManager", "Exception while parsing CheckQueue response: " + e);
+                    }
+                } else {
+                    Log.e("CallbackServiceManager", "Negative response for CheckQueue request: " + response);
+                }
+                bus.post(new CallbackCheckQueueDoneEvent(success, callbackQueuePosition));
+            }
+        });
+    }
 }

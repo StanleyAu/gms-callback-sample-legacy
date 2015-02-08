@@ -54,6 +54,7 @@ public class ChatServiceManager {
                         if (error.getResponse() != null) {
                             ChatException body = (ChatException) error.getBodyAs(ChatException.class);
                             bus.post(new ChatErrorEvent(body));
+                            return;
                         }
                     } catch (Exception e) {;}
                     bus.post(new UnknownErrorEvent(error));
@@ -83,6 +84,7 @@ public class ChatServiceManager {
                         if (error.getResponse() != null) {
                             ChatException body = (ChatException) error.getBodyAs(ChatException.class);
                             bus.post(new ChatErrorEvent(body));
+                            return;
                         }
                     } catch (Exception e) {;}
                     bus.post(new UnknownErrorEvent(error));
@@ -107,6 +109,7 @@ public class ChatServiceManager {
                     if (error.getResponse() != null) {
                         ChatException body = (ChatException) error.getBodyAs(ChatException.class);
                         bus.post(new ChatErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -130,6 +133,7 @@ public class ChatServiceManager {
                     if (error.getResponse() != null) {
                         ChatException body = (ChatException) error.getBodyAs(ChatException.class);
                         bus.post(new ChatErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -153,6 +157,7 @@ public class ChatServiceManager {
                     if (error.getResponse() != null) {
                         ChatException body = (ChatException) error.getBodyAs(ChatException.class);
                         bus.post(new ChatErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));
@@ -173,6 +178,7 @@ public class ChatServiceManager {
                     if (error.getResponse() != null) {
                         ChatException body = (ChatException) error.getBodyAs(ChatException.class);
                         bus.post(new ChatErrorEvent(body));
+                        return;
                     }
                 } catch (Exception e) {;}
                 bus.post(new UnknownErrorEvent(error));

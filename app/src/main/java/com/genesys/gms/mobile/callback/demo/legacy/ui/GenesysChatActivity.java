@@ -73,7 +73,8 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 
 		super.onDestroy();
 	}
-	
+
+    /*
 	@Override
 	protected void handleIntent(final Intent intent) {
 		genesysService.execute(new Runnable() {
@@ -95,6 +96,7 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 			}
 		});
 	}
+	*/
 	
 	private ChatListener chatListener = new ChatListener() {
 		
