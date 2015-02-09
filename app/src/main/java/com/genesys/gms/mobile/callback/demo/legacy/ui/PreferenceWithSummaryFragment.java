@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.preference.*;
 import android.support.v4.preference.PreferenceFragment;
 import android.text.InputType;
-import android.util.Log;
 import hugo.weaving.DebugLog;
 
 // TODO: A multi-purpose generic fragment is actually more trouble than it's worth
@@ -111,9 +110,6 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 
 	protected void updatePreferenceSummary(Preference pref) {
 		if (pref == null || pref instanceof TwoStatePreference || excludedPreferences.contains(pref.getKey())) {
-            if(pref != null) {
-                Log.d("PreferenceWithSummaryFragment", "Skipping pref with key: " + pref.getKey());
-            }
 			return;
 		}
 		else if (pref instanceof PreferenceGroup) {

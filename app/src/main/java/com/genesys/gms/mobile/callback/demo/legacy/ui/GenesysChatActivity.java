@@ -34,6 +34,8 @@ import com.genesys.gms.mobile.callback.demo.legacy.client.ChatSession;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatCreationParameters;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 
+import javax.inject.Inject;
+
 public class GenesysChatActivity extends AbstractGenesysActivity {
 	
 	private static final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
@@ -44,7 +46,8 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 		}
 	};
 	
-	private SharedPreferences sharedPreferences;
+	@Inject SharedPreferences sharedPreferences;
+    @Inject GenesysChatController controller;
 
 	private TextView transcriptTextView;
 	private View sendButton;
@@ -57,7 +60,6 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 		setupUi();
 	}
 	

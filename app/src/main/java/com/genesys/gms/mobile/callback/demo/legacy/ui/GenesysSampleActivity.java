@@ -41,7 +41,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     @Inject GmsEndpoint gmsEndpoint;
     @Inject GmsRequestInterceptor gmsRequestInterceptor;
     @Inject Gson gson;
-	@Inject GenesysController controller;
+	@Inject GenesysSampleController controller;
     private final EventBus bus;
     private Menu menu;
 
