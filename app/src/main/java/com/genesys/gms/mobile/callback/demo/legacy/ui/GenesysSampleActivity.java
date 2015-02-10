@@ -5,8 +5,11 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.support.v4.app.Fragment;
 import android.support.v4.preference.PreferenceFragment;
+import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.CallbackDialog;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatCometResponse;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.*;
@@ -311,7 +314,19 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 			DialogFragment dialog = new AboutDialogFragment();
 			dialog.show(getFragmentManager(), "dialog_about");
 			return true;
-	    }
+	    } else if(item.getItemId()==R.id.test) {
+            /*
+            String sampleData = "{\"channel\":\"/_genesys\",\"data\":{\"message\":{\"transcriptPosition\":\"2\",\"startedAt\":\"2015-02-10T22:39:23Z\",\"chatServiceMessage\":\"Chat service is available\",\"transcriptToShow\":[[\"Notice.Joined\",\"chat1\",\"has joined the session\",\"6\",\"AGENT\"]],\"chatSessionId\":\"0000YaADMWXM0013\",\"chatIxnState\":\"TRANSCRIPT\"},\"id\":\"ad41d420b17511e4adf163edd6718665\",\"tag\":\"service.chat.refresh.180-92e0f9e6-8096-4ccb-94f4-c0d03e14fd8d\"}}";
+            ChatCometResponse chatCometResponse = gson.fromJson(sampleData, ChatCometResponse.class);
+            Log.d("TEST_VALUE", chatCometResponse.toString());
+
+            String dialogData = "{\"error\":\"\",\"_dialogId\":\"\",\"_id\":\"\",\"_action\":\"DialNumber\",\"_tel_url\":\"\",\"_label\":\"\",\"_content\":[{\"_group_name\":\"groupie\",\"_group_content\":[{\"_label\":\"groupLabel1\",\"_user_action_url\":\"url1\"}]}],\"_chat_parameters\":{\"subject\":\"subject\"}}";
+            CallbackDialog callbackDialog = gson.fromJson(dialogData, CallbackDialog.class);
+            Log.d("TEST_VALUE", callbackDialog.toString());
+            */
+            Log.d("TEST_VALUE", "Nothing to show :)");
+            return true;
+        }
         return true;
 	}
 

@@ -59,7 +59,7 @@ public class DataModule {
     @Provides @Singleton
     Gson provideGson() {
         return new GsonBuilder()
-            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+            .setFieldNamingPolicy(FieldNamingPolicy.IDENTITY)
             .setDateFormat(UTC_DATE_FORMAT)
             .registerTypeAdapter(DateTime.class, new DateTimeTypeAdapter())
             .registerTypeAdapter(TranscriptEntry.class, new TranscriptEntryTypeAdapter())
