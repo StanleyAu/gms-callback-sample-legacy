@@ -7,13 +7,13 @@ public class TranscriptEntry {
     private final ChatEvent chatEvent;
     private final String nickname;
     private final String text;
-    private final int partyId;
+    private final String partyId;
     private final ChatPartyType chatPartyType;
 
     public TranscriptEntry(ChatEvent chatEvent,
                            String nickname,
                            String text,
-                           int partyId,
+                           String partyId,
                            ChatPartyType chatPartyType) {
         this.chatEvent = chatEvent;
         this.nickname = nickname;
@@ -34,7 +34,7 @@ public class TranscriptEntry {
         return text;
     }
 
-    public int getPartyId() {
+    public String getPartyId() {
         return partyId;
     }
 

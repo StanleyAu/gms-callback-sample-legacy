@@ -34,7 +34,7 @@ public class TranscriptEntryTypeAdapter extends TypeAdapter<TranscriptEntry> {
         ChatEvent event = null;
         String nickname = null;
         String text = null;
-        int partyId = -1;
+        String partyId = null;
         ChatPartyType partyType = null;
 
         if(in.peek() == JsonToken.NULL) {
@@ -45,7 +45,7 @@ public class TranscriptEntryTypeAdapter extends TypeAdapter<TranscriptEntry> {
         event = ChatEvent.valueOf(in.nextString());
         nickname = in.nextString();
         text = in.nextString();
-        partyId = in.nextInt();
+        partyId = in.nextString();
         partyType = ChatPartyType.valueOf(in.nextString());
         in.endArray();
 

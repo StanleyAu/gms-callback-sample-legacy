@@ -330,6 +330,7 @@ public class GenesysChatActivity extends BaseActivity {
         showPermanentInfo("Chat finished");
     }
 
+    @DebugLog
     public void onEventMainThread(ChatTranscriptEvent event) {
         TranscriptEntry transcriptEntry = event.transcriptEntry;
         switch(transcriptEntry.getChatEvent()) {
