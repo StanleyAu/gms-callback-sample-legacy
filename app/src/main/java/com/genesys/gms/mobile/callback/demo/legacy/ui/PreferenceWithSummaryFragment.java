@@ -91,10 +91,10 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 
 	@Override @DebugLog
 	public void onPause() {
-	    super.onPause();
-	    getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
         // This is bad form but inevitable because we use this generic fragment
         ((GenesysSampleActivity)getActivity()).onFragmentPause(this);
+        getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
+	    super.onPause();
 	}
 
 	@Override

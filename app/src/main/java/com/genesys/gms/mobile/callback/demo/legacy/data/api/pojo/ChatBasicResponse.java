@@ -9,8 +9,7 @@ public class ChatBasicResponse {
     @SerializedName("_chatIxnAPI-CREATE-URL") private final String createUrl;
     private final String _id;
 
-    public ChatBasicResponse(String createUrl,
-                             String _id) {
+    public ChatBasicResponse(String createUrl, String _id) {
         this.createUrl = createUrl;
         this._id = _id;
     }

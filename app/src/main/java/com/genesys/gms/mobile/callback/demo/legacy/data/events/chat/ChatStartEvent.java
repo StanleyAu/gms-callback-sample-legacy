@@ -13,6 +13,10 @@ public class ChatStartEvent {
     public final String subject;
     public final String subscriptionId;
     public final String userDisplayName;
+    public final String pushNotificationDeviceId;
+    public final String pushNotificationType;
+    public final String pushNotificationLanguage;
+    public final boolean pushNotificationDebug;
 
     public ChatStartEvent(String serviceId,
                           boolean verbose,
@@ -22,7 +26,11 @@ public class ChatStartEvent {
                           String email,
                           String subject,
                           String subscriptionId,
-                          String userDisplayName) {
+                          String userDisplayName,
+                          String pushNotificationDeviceId,
+                          String pushNotificationType,
+                          String pushNotificationLanguage,
+                          boolean pushNotificationDebug) {
         this.serviceId = serviceId;
         this.verbose = verbose;
         this.notifyBy = notifyBy;
@@ -32,6 +40,11 @@ public class ChatStartEvent {
         this.subject = subject;
         this.subscriptionId = subscriptionId;
         this.userDisplayName = userDisplayName;
+
+        this.pushNotificationDeviceId = pushNotificationDeviceId;
+        this.pushNotificationType = pushNotificationType;
+        this.pushNotificationLanguage = pushNotificationLanguage;
+        this.pushNotificationDebug = pushNotificationDebug;
     }
 
     @Override public String toString() {

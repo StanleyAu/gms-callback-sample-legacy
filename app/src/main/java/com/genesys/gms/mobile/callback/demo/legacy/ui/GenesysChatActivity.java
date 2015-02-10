@@ -20,6 +20,8 @@ import android.text.method.ScrollingMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
@@ -32,7 +34,13 @@ import com.genesys.gms.mobile.callback.demo.legacy.client.ChatEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatListener;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatSession;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatCreationParameters;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatResponseEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatStartEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatTranscriptEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
+import de.greenrobot.event.EventBus;
+import hugo.weaving.DebugLog;
 
 import javax.inject.Inject;
 
@@ -48,6 +56,7 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 	
 	@Inject SharedPreferences sharedPreferences;
     @Inject GenesysChatController controller;
+    private final EventBus bus;
 
 	private TextView transcriptTextView;
 	private View sendButton;
@@ -56,49 +65,55 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 	
 	private ChatSession chatSession;
 	private boolean chatFinished;
-	
+
+    private String cometUrl;
+    private String chatId;
+    private String subject;
+
+    @DebugLog
+    public GenesysChatActivity() {
+        this.bus = EventBus.getDefault();
+    }
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+        super.onCreate(savedInstanceState);
+        final Intent intent = getIntent();
+        if (Globals.ACTION_GENESYS_START_CHAT.equals(intent.getAction())) {
+            cometUrl = intent.getStringExtra(Globals.EXTRA_COMET_URL);
+
+            chatId = intent.getStringExtra(Globals.EXTRA_CHAT_ID);
+            subject = intent.getStringExtra(Globals.EXTRA_SUBJECT);
+            if(chatId != null && subject != null) {
+                controller.startChat(chatId, subject);
+            }
+        } else {
+            // TODO: What is it doing?
+        }
 		setupUi();
 	}
-	
-	@Override
-	protected void onDestroy() {
-		if (chatSession != null) {
-			genesysService.execute(new Runnable() {
-				@Override public void run() {
-					chatSession.disconnect();
-				}
-			});
-		}
 
-		super.onDestroy();
-	}
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.chat_actions, menu);
+        return true;
+    }
 
-    /*
-	@Override
-	protected void handleIntent(final Intent intent) {
-		genesysService.execute(new Runnable() {
-			@Override public void run() {
-				if (Globals.ACTION_GENESYS_START_CHAT.equals(intent.getAction())) {
-					chatSession = genesysService.startChat(
-							intent.getStringExtra(Globals.EXTRA_CHAT_URL),
-							intent.getStringExtra(Globals.EXTRA_COMET_URL),
-							chatListener, uiExecutor);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        bus.register(this);
+        if(cometUrl != null && !cometUrl.isEmpty()) {
+            controller.startComet(cometUrl);
+        }
+    }
 
-					ChatCreationParameters chatParams = new ChatCreationParameters();
-					chatParams.firstName = sharedPreferences.getString("first_name", null);
-					chatParams.lastName = sharedPreferences.getString("last_name", null);
-					chatParams.userDisplayName = sharedPreferences.getString("chat_display_name", null);
-					chatParams.email = sharedPreferences.getString("chat_email", null);
-					chatParams.subject = intent.getStringExtra(Globals.EXTRA_SUBJECT);
-					chatSession.createInteraction(chatParams);
-				}
-			}
-		});
-	}
-	*/
+    @Override
+    protected void onPause() {
+        controller.stopComet();
+        bus.unregister(this);
+        super.onPause();
+    }
 	
 	private ChatListener chatListener = new ChatListener() {
 		
@@ -231,4 +246,58 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 		infoTextView.setText(text);
 	}
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if(item.getItemId()==R.id.close) {
+            controller.disconnectChat();
+        }
+        return true;
+    }
+
+    public void onEventMainThread(ChatResponseEvent event) {
+        switch(event.chatRequestType) {
+            case START:
+                // handle start result
+                break;
+            case SEND:
+                // handle send result
+                break;
+            case REFRESH:
+                // handle refresh result
+                break;
+            case START_TYPING:
+                break;
+            case STOP_TYPING:
+                break;
+            case DISCONNECT:
+                // TODO: We'll need to process the Comet equivalent of this too
+                chatFinished = true;
+                updateSendButtonState();
+                sendEditText.setText("");
+                sendEditText.setEnabled(false);
+                showPermanentInfo("Chat finished");
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void onEventMainThread(ChatTranscriptEvent event) {
+        TranscriptEntry transcriptEntry = event.transcriptEntry;
+        switch(transcriptEntry.getChatEvent()) {
+            case PARTY_JOINED:
+            case PARTY_LEFT:
+                appendTranscriptInfo(transcriptEntry.getNickname() + " " + transcriptEntry.getText());
+                break;
+            case TYPING_STARTED:
+            case TYPING_STOPPED:
+                showInfo(transcriptEntry.getNickname() + " " + transcriptEntry.getText());
+                break;
+            case MESSAGE:
+            case PUSH_URL:
+                showPermanentInfo("");
+                appendTranscriptMessage(transcriptEntry.getNickname(), transcriptEntry.getText());
+                break;
+        }
+    }
 }

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.cometd.bayeux.Channel;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSessionChannel;
 import org.cometd.bayeux.client.ClientSessionChannel.MessageListener;
@@ -82,6 +83,15 @@ public class GenesysSession {
 
 			bayeuxClient = new BayeuxClient(cometUrl, transport);
 			bayeuxClient.handshake();
+            /*
+            bayeuxClient.getChannel(Channel.META_HANDSHAKE).addListener(new MessageListener() {
+                @Override
+                public void onMessage(ClientSessionChannel channel, Message message) {
+                    if (message.isSuccessful()) {
+                    }
+                }
+            });
+            */
 
 			boolean handshakeSuccess = bayeuxClient.waitFor(15000, BayeuxClient.State.CONNECTED);
 			if (!handshakeSuccess)

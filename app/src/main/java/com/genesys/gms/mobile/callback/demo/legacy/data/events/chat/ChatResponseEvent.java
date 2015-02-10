@@ -23,6 +23,7 @@ public class ChatResponseEvent {
 
     public static enum ChatRequestType {
         START,
+        SEND,
         REFRESH,
         START_TYPING,
         STOP_TYPING,

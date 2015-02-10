@@ -223,9 +223,16 @@ public class CallbackServiceManager {
     }
 
     public void onEvent(CallbackDialogEvent event) {
+        String strBaseUri = gmsEndpoint.getUrl();
+        String strSyncUri = new Uri.Builder()
+            .encodedPath(strBaseUri)
+            .appendEncodedPath(event.url)
+            .toString();
+
         String strGmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
+        // TODO: Handle RuntimeExceptions resulting from Malformed URI
         Request.Builder builder = new Request.Builder()
-                .url(event.url);
+                .url(strSyncUri);
         if(strGmsUser != null && !strGmsUser.isEmpty()) {
             builder.addHeader(GMS_USER, strGmsUser);
         }
@@ -259,13 +266,6 @@ public class CallbackServiceManager {
 
     public void onEvent(CallbackCheckQueueEvent event) {
         String strBaseUri = gmsEndpoint.getUrl();
-        /*
-        Uri baseUri = Uri.parse(gmsEndpoint.getUrl());
-        Uri serviceUri = Uri.withAppendedPath(
-                baseUri,
-                "service/" + event.sessionId + "/" + CHECK_QUEUE_POSITION_SERVICE_NAME
-        );
-        */
         // TODO: Check how using the Callback interface can affect this
         String strServiceUri = new Uri.Builder()
                 .encodedPath(strBaseUri)

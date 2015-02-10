@@ -139,11 +139,6 @@ public class GenesysService extends Service {
 		}
 	}
 	
-	public void continueDialog(String url) {
-		Log.i("GenesysService", "Continuing dialog with POST " + url);
-		post(Uri.parse(url).getPath(), null);
-	}
-	
 	public ChatSession startChat(String chatUrl, final String cometUrl,
 			final ChatListener chatListener, final Executor listenerExecutor) {
 		

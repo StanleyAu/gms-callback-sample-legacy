@@ -34,22 +34,39 @@ public interface ChatService {
                           @Field("subject") String subject,
                           @Field("subscriptionID") String subscriptionId,
                           @Field("userDisplayName") String userDisplayName,
+                          @Field("push_notification_deviceid") String pushNotificationDeviceId,
+                          @Field("push_notification_type") String pushNotificationType,
+                          @Field("push_notification_language") String pushNotificationLanguage,
+                          @Field("push_notification_debug") boolean pushNotificationDebug,
                           Callback<ChatResponse> callback);
 
     @FormUrlEncoded
-    @POST("/service/{service_id}/ixn/chat/refresh")
-    public ChatResponse refreshChat(@Path("service_id") String serviceId,
-                                    @Field("transcriptPosition") int transcriptPosition,
+    @POST("/service/{service_id}/ixn/chat/send")
+    public ChatResponse send(@Path("service_id") String serviceId,
                                     @Field("message") String message,
                                     @Field("_verbose") boolean verbose);
 
     @FormUrlEncoded
+    @POST("/service/{service_id}/ixn/chat/send")
+    public void send(@Path("service_id") String serviceId,
+                             @Field("message") String message,
+                             @Field("_verbose") boolean verbose,
+                             Callback<ChatResponse> callback);
+
+    @FormUrlEncoded
     @POST("/service/{service_id}/ixn/chat/refresh")
-    public void refreshChat(@Path("service_id") String serviceId,
-                            @Field("transcriptPosition") int transcriptPosition,
-                            @Field("message") String message,
-                            @Field("_verbose") boolean verbose,
-                            Callback<ChatResponse> callback);
+    public ChatResponse refresh(@Path("service_id") String serviceId,
+                                @Field("transcriptPosition") int transcriptPosition,
+                                @Field("message") String message,
+                                @Field("_verbose") boolean verbose);
+
+    @FormUrlEncoded
+    @POST("/service/{service_id}/ixn/chat/refresh")
+    public void refresh(@Path("service_id") String serviceId,
+                        @Field("transcriptPosition") int transcriptPosition,
+                        @Field("message") String message,
+                        @Field("_verbose") boolean verbose,
+                        Callback<ChatResponse> callback);
 
     @FormUrlEncoded
     @POST("/service/{service_id}/ixn/chat/startTyping")

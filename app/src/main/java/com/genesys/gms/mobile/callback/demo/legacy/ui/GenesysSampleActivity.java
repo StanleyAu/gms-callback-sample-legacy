@@ -165,9 +165,9 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 
     @Override @DebugLog
     public void onPause() {
-        super.onPause();
-        bus.unregister(this);
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
+        bus.unregister(this);
+        super.onPause();
     }
 
     // Hack to deal with convoluted lifecycles (until this is reorganized)
@@ -403,22 +403,29 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         }
         String exceptionMessage = event.callbackException.getMessage();
         if(exceptionMessage == null || exceptionMessage.isEmpty()) {
+            // TODO:
             return;
         }
         Toast.makeText(this, exceptionMessage, Toast.LENGTH_SHORT).show();
     }
 
+    @DebugLog
     public void onEventMainThread(GcmReceiveEvent event) {
+        if(!gmsEndpoint.isUrlSet()) {
+            Toast.makeText(this, "Server settings not configured. Can't process event!", Toast.LENGTH_SHORT).show();
+            log.debug("Event dropped: " + event);
+            return;
+        }
         String gcmMessage = event.extras.getString("message");
         if(gcmMessage == null || gcmMessage.isEmpty()) {
-            // There is no message.
+            // TODO: There is no message.
             return;
         }
         GcmSyncMessage gcmSyncMessage = null;
         try {
             gcmSyncMessage = gson.fromJson(gcmMessage, GcmSyncMessage.class);
         } catch (JsonSyntaxException e) {
-            // Failed to parse cloud message, can't interpret
+            // TODO: Failed to parse cloud message, can't interpret
         }
         if(gcmSyncMessage != null) {
             controller.handleGcmMessage(gcmSyncMessage);

@@ -15,9 +15,11 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.Callback
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackCheckQueueEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackDialogEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import de.greenrobot.event.EventBus;
+import hugo.weaving.DebugLog;
 import org.joda.time.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,9 +159,10 @@ public class GenesysSampleController {
             case CHAT:
                 Intent intent = new Intent(context, GenesysChatActivity.class);
                 intent.setAction(Globals.ACTION_GENESYS_START_CHAT);
-                intent.putExtra(Globals.EXTRA_CHAT_URL, dialog.getStartChatUrl());
+                // intent.putExtra(Globals.EXTRA_CHAT_URL, dialog.getStartChatUrl());
                 intent.putExtra(Globals.EXTRA_COMET_URL, dialog.getCometUrl());
                 intent.putExtra(Globals.EXTRA_SUBJECT, dialog.getChatParameters().getSubject());
+                intent.putExtra(Globals.EXTRA_CHAT_ID, dialog.getId());
                 context.startActivity(intent);
                 break;
             case CONFIRM:
@@ -170,9 +173,10 @@ public class GenesysSampleController {
         }
     }
 
+    @DebugLog
     public void handleGcmMessage(GcmSyncMessage gcmSyncMessage) {
         // Grab message and do post
-        bus.post(new CallbackDialogEvent(gcmSyncMessage.getSyncUrl()));
+        bus.post(new CallbackDialogEvent(gcmSyncMessage.getSyncUri()));
     }
 
     public void checkQueuePosition(String sessionId) {

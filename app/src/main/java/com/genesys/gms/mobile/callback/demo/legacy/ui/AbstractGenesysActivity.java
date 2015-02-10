@@ -22,12 +22,14 @@ public abstract class AbstractGenesysActivity extends BaseActivity {
 		bindGenesysService();		
 	}
 
+    /*
     // TODO: Remove all traces of handleIntent, we don't need this anymore
 	@Override
 	protected void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
-		//handleIntent(intent);
+		handleIntent(intent);
 	}
+	*/
 
 	@Override
 	protected void onDestroy() {

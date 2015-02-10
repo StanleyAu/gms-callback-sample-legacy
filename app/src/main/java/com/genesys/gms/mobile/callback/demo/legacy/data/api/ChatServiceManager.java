@@ -5,7 +5,6 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatException;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatResponse;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.*;
-import com.squareup.okhttp.OkHttpClient;
 import de.greenrobot.event.EventBus;
 import retrofit.Callback;
 import retrofit.RetrofitError;
@@ -39,6 +38,10 @@ public class ChatServiceManager {
             event.subject,
             event.subscriptionId,
             event.userDisplayName,
+            event.pushNotificationDeviceId, // Added for Jeff's changes
+            event.pushNotificationType,
+            event.pushNotificationLanguage,
+            event.pushNotificationDebug,
             new Callback<ChatResponse>() {
                 @Override
                 public void success(ChatResponse chatResponse, Response response) {
@@ -63,8 +66,39 @@ public class ChatServiceManager {
         );
     }
 
+    public void onEvent(ChatSendEvent event) {
+        chatService.send(
+            event.serviceId,
+            event.message,
+            event.verbose,
+            new Callback<ChatResponse>() {
+                @Override
+                public void success(ChatResponse chatResponse, Response response) {
+                    bus.post(new ChatResponseEvent(
+                        chatResponse,
+                        ChatResponseEvent.ChatRequestType.SEND
+                    ));
+                }
+
+                @Override
+                public void failure(RetrofitError error) {
+                    try {
+                        if (error.getResponse() != null) {
+                            ChatException body = (ChatException) error.getBodyAs(ChatException.class);
+                            bus.post(new ChatErrorEvent(body));
+                            return;
+                        }
+                    } catch (Exception e) {
+                        ;
+                    }
+                    bus.post(new UnknownErrorEvent(error));
+                }
+            }
+        );
+    }
+
     public void onEvent(ChatRefreshEvent event) {
-        chatService.refreshChat(
+        chatService.refresh(
             event.serviceId,
             event.transcriptPosition,
             event.message,
@@ -86,7 +120,9 @@ public class ChatServiceManager {
                             bus.post(new ChatErrorEvent(body));
                             return;
                         }
-                    } catch (Exception e) {;}
+                    } catch (Exception e) {
+                        ;
+                    }
                     bus.post(new UnknownErrorEvent(error));
                 }
             }

@@ -9,6 +9,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.api.ApiModule;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
 import com.genesys.gms.mobile.callback.demo.legacy.data.gson.DateTimeTypeAdapter;
 import com.genesys.gms.mobile.callback.demo.legacy.data.gson.TranscriptEntryTypeAdapter;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -16,6 +17,8 @@ import com.squareup.okhttp.Cache;
 import com.squareup.okhttp.OkHttpClient;
 import dagger.Module;
 import dagger.Provides;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -41,6 +44,11 @@ public class DataModule {
     @Provides @Singleton
     OkHttpClient provideOkHttpClient(Application app) {
         return createOkHttpClient(app);
+    }
+
+    @Provides @Singleton
+    HttpClient provideJettyHttpClient() {
+        return createJettyHttpClient();
     }
 
     @Provides @Singleton
@@ -77,5 +85,22 @@ public class DataModule {
         }
 
         return client;
+    }
+
+    static HttpClient createJettyHttpClient() {
+        HttpClient httpClient = new HttpClient();
+        httpClient.setConnectTimeout(Globals.CONNECT_TIMEOUT);
+        QueuedThreadPool threadPool = new QueuedThreadPool();
+        threadPool.setMinThreads(3);
+        threadPool.setMaxThreads(3); // minimum required is 3
+        threadPool.setDaemon(true);
+        threadPool.setName("JettyHttpClient");
+        httpClient.setThreadPool(threadPool);
+        try {
+            httpClient.start();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return httpClient;
     }
 }
