@@ -4,14 +4,14 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo;
  * Created by Stan on 2/8/2015.
  */
 public class CallbackQueuePosition {
-    private final int _position;
-    private final int _eta;
-    private final int _total_waiting;
+    private final String _position;
+    private final String _eta;
+    private final String _total_waiting;
     private final boolean _agent_ready_threshold_passed;
 
-    public CallbackQueuePosition(int _position,
-                                 int _eta,
-                                 int _total_waiting,
+    public CallbackQueuePosition(String _position,
+                                 String _eta,
+                                 String _total_waiting,
                                  boolean _agent_ready_threshold_passed) {
         this._position = _position;
         this._eta = _eta;
@@ -19,15 +19,15 @@ public class CallbackQueuePosition {
         this._agent_ready_threshold_passed = _agent_ready_threshold_passed;
     }
 
-    public int getPosition() {
+    public String getPosition() {
         return _position;
     }
 
-    public int getEta() {
+    public String getEta() {
         return _eta;
     }
 
-    public int getTotalWaiting() {
+    public String getTotalWaiting() {
         return _total_waiting;
     }
 

@@ -1,5 +1,6 @@
 package com.genesys.gms.mobile.callback.demo.legacy.client;
 
+import android.util.Log;
 import org.cometd.bayeux.Channel;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSession;
@@ -54,16 +55,31 @@ public class CometClient {
                 protected void customize(ContentExchange contentExchange) {
                     super.customize(contentExchange);
                     if (gmsUser != null && !gmsUser.isEmpty()) {
+                        Log.d("CometClient", "Adding " + GMS_USER + ": " + gmsUser + " header.");
                         contentExchange.addRequestHeader(GMS_USER, gmsUser);
                     }
                 }
             };
             bayeuxClient = new BayeuxClient(serverUrl, transport);
-            addListeners();
+            //addListeners();
             addExtensions();
         }
         if(!bayeuxClient.isHandshook()) {
             bayeuxClient.handshake();
+
+            boolean handshakeSuccess = bayeuxClient.waitFor(15000, BayeuxClient.State.CONNECTED);
+            if (!handshakeSuccess)
+                throw new RuntimeException("CometD handshake did not succeed");
+
+            bayeuxClient.getChannel("/_genesys").subscribe(new ClientSessionChannel.MessageListener() {
+                @Override public void onMessage(ClientSessionChannel channel, Message message) {
+                    try {
+                        handler.onMessage(channel, message);
+                    } catch (Exception e) {
+                        Log.e("CometClient", "Error handling comet message", e);
+                    }
+                }
+            });
         }
     }
 
@@ -75,6 +91,7 @@ public class CometClient {
                     @Override
                     public void onMessage(ClientSessionChannel channel, Message message) {
                         if (message.isSuccessful()) {
+                            Log.d("CometClient", "Handshake successful, adding subs");
                             addSubscriptions();
                         }
                     }
@@ -128,6 +145,7 @@ public class CometClient {
             @Override
             public boolean sendMeta(ClientSession session, Message.Mutable message) {
                 if(Channel.META_DISCONNECT.equals(message.getChannel())) {
+                    Log.d("CometClient", "Inserting transcriptPosition ext");
                     Map<String,Object> ext = message.getExt(true);
                     // TODO: Use hook to retrieve value
                     ext.put("transcriptPosition", transcriptPosition);

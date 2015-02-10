@@ -47,10 +47,11 @@ public class ApiModule {
 
     @Provides @Singleton
     GmsRequestInterceptor provideRequestInterceptor(SharedPreferences sharedPreferences) {
+        Log.d("GmsRequestInterceptor", "Constructing new GmsRequestInterceptor");
         GmsRequestInterceptor gmsRequestInterceptor = new GmsRequestInterceptor();
         String gmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
         gmsRequestInterceptor.setGmsUser(gmsUser);
-        return new GmsRequestInterceptor();
+        return gmsRequestInterceptor;
     }
 
     @Provides @Singleton
@@ -78,7 +79,12 @@ public class ApiModule {
     }
 
     @Provides @Singleton
-    CallbackService provideNotificationService(RestAdapter restAdapter) {
+    CallbackService provideCallbackService(RestAdapter restAdapter) {
         return restAdapter.create(CallbackService.class);
+    }
+
+    @Provides @Singleton
+    ChatService provideChatService(RestAdapter restAdapter) {
+        return restAdapter.create(ChatService.class);
     }
 }

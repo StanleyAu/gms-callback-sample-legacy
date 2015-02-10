@@ -158,7 +158,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	@Override @DebugLog
 	public void onResume() {
 	    super.onResume();
-        bus.register(this);
+        bus.registerSticky(this);
 	    sharedPreferences.registerOnSharedPreferenceChangeListener(this);
         // NTS: Can't checkDesiredTimeEnabled here because Preference init occurs later
 	}
@@ -303,7 +303,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
                 log.debug("GMS Endpoint is not initialized.");
             } else {
                 // TODO: Provide session management, tracking.
-                controller.checkQueuePosition("foobar");
+                controller.checkQueuePosition();
                 item.setEnabled(false);
             }
 			return true;
@@ -411,6 +411,9 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 
     @DebugLog
     public void onEventMainThread(GcmReceiveEvent event) {
+        // Processed, remove sticky!
+        bus.removeStickyEvent(event);
+
         if(!gmsEndpoint.isUrlSet()) {
             Toast.makeText(this, "Server settings not configured. Can't process event!", Toast.LENGTH_SHORT).show();
             log.debug("Event dropped: " + event);

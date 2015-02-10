@@ -1,17 +1,14 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -19,6 +16,7 @@ import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -29,32 +27,27 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
-import com.genesys.gms.mobile.callback.demo.legacy.client.ChatEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.client.ChatListener;
-import com.genesys.gms.mobile.callback.demo.legacy.client.ChatSession;
-import com.genesys.gms.mobile.callback.demo.legacy.client.ChatCreationParameters;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatResponseEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatStartEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatTranscriptEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.*;
+import com.genesys.gms.mobile.callback.demo.legacy.data.push.GcmIntentService;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 
 import javax.inject.Inject;
 
-public class GenesysChatActivity extends AbstractGenesysActivity {
+public class GenesysChatActivity extends BaseActivity {
 	
-	private static final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+	private static final ScheduledExecutorService timer = Executors.newScheduledThreadPool(2);
 	
 	private final Executor uiExecutor = new Executor() {
 		@Override public void execute(Runnable command) {
 			runOnUiThread(command);
 		}
 	};
-	
-	@Inject SharedPreferences sharedPreferences;
+
     @Inject GenesysChatController controller;
     private final EventBus bus;
 
@@ -62,9 +55,10 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 	private View sendButton;
 	private EditText sendEditText;
 	private TextView infoTextView;
-	
-	private ChatSession chatSession;
+    private TextWatcher textWatcher;
+
 	private boolean chatFinished;
+    private boolean userTyping;
 
     private String cometUrl;
     private String chatId;
@@ -76,21 +70,47 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
     }
 
 	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        final Intent intent = getIntent();
-        if (Globals.ACTION_GENESYS_START_CHAT.equals(intent.getAction())) {
-            cometUrl = intent.getStringExtra(Globals.EXTRA_COMET_URL);
+	protected void onCreate(Bundle inState) {
+        super.onCreate(inState);
 
-            chatId = intent.getStringExtra(Globals.EXTRA_CHAT_ID);
-            subject = intent.getStringExtra(Globals.EXTRA_SUBJECT);
-            if(chatId != null && subject != null) {
-                controller.startChat(chatId, subject);
+        final Intent intent = getIntent();
+
+        if (inState == null) {
+            if (Globals.ACTION_GENESYS_START_CHAT.equals(intent.getAction())) {
+                cometUrl = intent.getStringExtra(Globals.EXTRA_COMET_URL);
+
+                chatId = intent.getStringExtra(Globals.EXTRA_CHAT_ID);
+                subject = intent.getStringExtra(Globals.EXTRA_SUBJECT);
+                if (chatId != null && subject != null) {
+                    controller.startChat(chatId, subject);
+                }
+            } else {
+                Bundle extras = intent.getExtras();
+                if (extras != null) {
+                    // Determine if activity was started as a result of GCM notification
+                    int notificationId = extras.getInt(GcmIntentService.GCM_NOTIFICATION_ID, -1);
+                    if (notificationId != -1) {
+                        Log.i("GenesysChatActivity", "Clearing notification with ID " + notificationId + " from drawer.");
+                        // Remove the notification from the Notification Drawer
+                        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                        manager.cancel(notificationId);
+                    }
+                }
             }
-        } else {
-            // TODO: What is it doing?
         }
-		setupUi();
+
+        setupUi();
+
+        if(inState != null) {
+            chatFinished = inState.getBoolean("chatFinished");
+            cometUrl = inState.getString("cometUrl");
+            chatId = inState.getString("chatId");
+            subject = inState.getString("subject");
+            transcriptTextView.setText(inState.getCharSequence("transcript"));
+            sendEditText.setText(inState.getString("sendEditText"));
+
+            controller.restoreState(inState);
+        }
 	}
 
     @Override
@@ -100,49 +120,49 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putBoolean("chatFinished", chatFinished);
+        outState.putString("cometUrl", cometUrl);
+        outState.putString("chatId", chatId);
+        outState.putString("subject", subject);
+        outState.putCharSequence("transcript", transcriptTextView.getText());
+        outState.putString("sendEditText", sendEditText.getText().toString());
+        controller.persistState(outState);
+
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         bus.register(this);
-        if(cometUrl != null && !cometUrl.isEmpty()) {
-            controller.startComet(cometUrl);
+        if(chatFinished) {
+            finishChat();
         }
+        if(cometUrl != null && !cometUrl.isEmpty()) {
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... params) {
+                    controller.startComet(cometUrl);
+                    return null;
+                }
+            }.execute();
+        }
+        Log.d("GenesysChatActivity", "controller: " + controller);
     }
 
     @Override
     protected void onPause() {
-        controller.stopComet();
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... params) {
+                controller.stopComet();
+                return null;
+            }
+        }.execute();
         bus.unregister(this);
         super.onPause();
     }
-	
-	private ChatListener chatListener = new ChatListener() {
-		
-		@Override public void chatEventReceived(ChatEvent chatEvent) {
-			switch (chatEvent.eventType) {
-			case PARTY_JOINED:
-			case PARTY_LEFT:
-				appendTranscriptInfo(chatEvent.nickname + " " + chatEvent.text);
-				break;
-			case TYPING_STARTED:
-			case TYPING_STOPPED:
-				showInfo(chatEvent.nickname + " " + chatEvent.text);
-				break;
-			case MESSAGE:
-			case PUSH_URL:
-				showPermanentInfo("");
-				appendTranscriptMessage(chatEvent.nickname, chatEvent.text);
-				break;
-			}
-		}
-
-		@Override public void chatDisconnected() {
-			chatFinished = true;
-			updateSendButtonState();
-			sendEditText.setText("");
-			sendEditText.setEnabled(false);
-			showPermanentInfo("Chat finished");
-		}
-	};
 	
 	private void setupUi() {
 		setContentView(R.layout.chat_layout);
@@ -157,15 +177,25 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 				return false;
 			}
 		});
-		
-		sendEditText.addTextChangedListener(new TextWatcher() {
-			@Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-				updateSendButtonState();
-			}
-			
-			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-			@Override public void afterTextChanged(Editable s) {}
-		});
+
+        textWatcher = new TextWatcher() {
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateSendButtonState();
+            }
+
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                if(!userTyping) {
+                    userTyping = true;
+                    controller.startTyping();
+                }
+            }
+            @Override public void afterTextChanged(Editable s) {
+                if(scheduledStopTypingMessage == null || scheduledStopTypingMessage.isDone()) {
+                    scheduledStopTypingMessage = timer.schedule(updateUserTyping, 5, TimeUnit.SECONDS);
+                }
+            }
+        };
+		sendEditText.addTextChangedListener(textWatcher);
 		
 		transcriptTextView = (TextView)findViewById(R.id.transcriptText);
 		transcriptTextView.setMovementMethod(new ScrollingMovementMethod());
@@ -188,11 +218,7 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 	private void sendMessage() {
 		final String text = sendEditText.getText().toString();
 		sendEditText.setText("");
-		genesysService.execute(new Runnable() {
-			@Override public void run() {
-				chatSession.send(text);
-			}
-		});
+        controller.sendText(text);
 	}
 	
 	private void appendTranscriptMessage(final String tag, final String message) {
@@ -219,8 +245,17 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 			});
 		}
 	};
+
+    private final Runnable updateUserTyping = new Runnable() {
+        @Override
+        public void run() {
+            userTyping = false;
+            controller.stopTyping();
+        }
+    };
 	
 	ScheduledFuture<?> scheduledWipeInformationalMessage;
+    ScheduledFuture<?> scheduledStopTypingMessage;
 	
 	private void showInfo(String text) {
 		showInfoImpl(text, false);
@@ -238,8 +273,9 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
 		
 		setInformationalMessageImpl(text);
 		
-		if (!permanent)
-			scheduledWipeInformationalMessage = timer.schedule(wipeInformationalMessage, 10, TimeUnit.SECONDS);
+		if (!permanent) {
+            scheduledWipeInformationalMessage = timer.schedule(wipeInformationalMessage, 10, TimeUnit.SECONDS);
+        }
 	}
 	
 	private void setInformationalMessageImpl(final String text) {
@@ -249,7 +285,12 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if(item.getItemId()==R.id.close) {
-            controller.disconnectChat();
+            if(!chatFinished) {
+                controller.disconnectChat();
+            } else {
+                Log.d("GenesysChatActivity", "Ending chat activity.");
+                finish();
+            }
         }
         return true;
     }
@@ -270,16 +311,23 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
             case STOP_TYPING:
                 break;
             case DISCONNECT:
-                // TODO: We'll need to process the Comet equivalent of this too
-                chatFinished = true;
-                updateSendButtonState();
-                sendEditText.setText("");
-                sendEditText.setEnabled(false);
-                showPermanentInfo("Chat finished");
+                finishChat();
                 break;
             default:
                 break;
         }
+    }
+
+    private void finishChat() {
+        chatFinished = true;
+        updateSendButtonState();
+        if(textWatcher != null) {
+            sendEditText.removeTextChangedListener(textWatcher);
+            textWatcher = null;
+        }
+        sendEditText.setText("");
+        sendEditText.setEnabled(false);
+        showPermanentInfo("Chat finished");
     }
 
     public void onEventMainThread(ChatTranscriptEvent event) {
@@ -299,5 +347,9 @@ public class GenesysChatActivity extends AbstractGenesysActivity {
                 appendTranscriptMessage(transcriptEntry.getNickname(), transcriptEntry.getText());
                 break;
         }
+    }
+
+    public void onEventMainThread(ChatErrorEvent event) {
+        Log.e("GenesysChatActivity", "Chat Error encountered: " + event.chatException);
     }
 }

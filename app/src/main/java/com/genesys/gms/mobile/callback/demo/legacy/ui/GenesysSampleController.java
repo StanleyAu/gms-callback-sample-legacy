@@ -43,6 +43,8 @@ public class GenesysSampleController {
     private final SharedPreferences sharedPreferences;
     private final EventBus bus;
 
+    private String sessionId;
+
     @Inject
 	public GenesysSampleController(@ForActivity Context context, SharedPreferences sharedPreferences) {
         this.context = context;
@@ -120,6 +122,7 @@ public class GenesysSampleController {
 	}
 
     public void handleDialog(CallbackDialog dialog) {
+        sessionId = dialog.getId();
         switch(dialog.getAction()) {
             case DIAL:
                 String telUri = dialog.getTelUrl();
@@ -179,16 +182,16 @@ public class GenesysSampleController {
         bus.post(new CallbackDialogEvent(gcmSyncMessage.getSyncUri()));
     }
 
-    public void checkQueuePosition(String sessionId) {
+    public void checkQueuePosition() {
         bus.post(new CallbackCheckQueueEvent(sessionId));
     }
 
     public void updateQueuePosition(CallbackQueuePosition callbackQueuePosition) {
         sharedPreferences.edit()
-                .putInt("queue_position", callbackQueuePosition.getPosition())
-                .putInt("queue_eta", callbackQueuePosition.getEta())
+                .putString("queue_position", callbackQueuePosition.getPosition())
+                .putString("queue_eta", callbackQueuePosition.getEta())
                 .putBoolean("queue_agent_ready_threshold_passed", callbackQueuePosition.isAgentReadyThresholdPassed())
-                .putInt("queue_waiting", callbackQueuePosition.getTotalWaiting())
+                .putString("queue_waiting", callbackQueuePosition.getTotalWaiting())
                 .apply();
     }
 

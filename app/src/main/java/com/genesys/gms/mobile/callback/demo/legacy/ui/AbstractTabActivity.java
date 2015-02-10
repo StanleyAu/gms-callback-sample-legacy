@@ -8,12 +8,13 @@ import android.support.v4.view.ViewPager;
 import android.view.Menu;
 import android.view.ViewGroup;
 import com.astuetz.PagerSlidingTabStrip;
+import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class AbstractTabActivity extends AbstractGenesysActivity {
+public abstract class AbstractTabActivity extends BaseActivity {
     private PagerSlidingTabStrip tabs;
 	protected TabFragmentPagerAdapter adapter;
     private ViewPager pager;

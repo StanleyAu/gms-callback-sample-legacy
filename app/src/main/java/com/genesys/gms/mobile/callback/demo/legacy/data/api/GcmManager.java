@@ -1,16 +1,25 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
+import com.genesys.gms.mobile.callback.demo.legacy.R;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
+import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysChatActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysSampleActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.NoSubscriberEvent;
 import hugo.weaving.DebugLog;
@@ -26,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Singleton
 public class GcmManager {
     private final GoogleCloudMessaging googleCloudMessaging;
+    private final Gson gson;
     private final EventBus bus;
     private final SharedPreferences sharedPreferences;
     private final Context context;
@@ -41,8 +51,9 @@ public class GcmManager {
     public static final String GCM_NOTIFICATION_ID = "gcm_notification_id";
 
     @Inject
-    public GcmManager(GoogleCloudMessaging googleCloudMessaging, SharedPreferences sharedPreferences, @ForApplication Context context) {
+    public GcmManager(GoogleCloudMessaging googleCloudMessaging, Gson gson, SharedPreferences sharedPreferences, @ForApplication Context context) {
         this.googleCloudMessaging = googleCloudMessaging;
+        this.gson = gson;
         this.bus = EventBus.getDefault();
         this.sharedPreferences = sharedPreferences;
         this.context = context;
@@ -128,26 +139,38 @@ public class GcmManager {
      */
     @DebugLog
     public void onEvent(NoSubscriberEvent event) {
-        CharSequence message = "Message received!";
-        if(event.originalEvent instanceof GcmReceiveEvent) {
-            CharSequence extraMessage = ((GcmReceiveEvent) event.originalEvent).extras.getCharSequence("message");
-            if(extraMessage != null) {
-                message = extraMessage;
-            }
+        if(!(event.originalEvent instanceof GcmReceiveEvent)) {
+            return;
+        }
+        GcmReceiveEvent gcmReceiveEvent = (GcmReceiveEvent)event.originalEvent;
+        String message = gcmReceiveEvent.extras.getString("message");
+        GcmSyncMessage gcmSyncMessage = null;
+        try {
+            gcmSyncMessage = gson.fromJson(message.toString(), GcmSyncMessage.class);
+            message = "Callback needs attention!";
+        } catch(JsonSyntaxException e) {
+            // Likely a GMS chat poke
         }
 
-        /*
         NotificationCompat.Builder builder =
-            getNotificationBuilder(R.drawable.ic_launcher, context.getResources().getString(R.string.launcher_name), message);
+            getNotificationBuilder(
+                R.drawable.ic_launcher,
+                context.getResources().getString(R.string.title_activity_genesys_sample),
+                message
+            );
 
         // int notificationId = mNotifyId.getAndIncrement();
-        Intent resultIntent = new Intent(context, MainActivity.class);
+        Intent resultIntent = new Intent(context, GenesysChatActivity.class);
         //resultIntent.putExtra(GCM_NOTIFICATION_ID, notificationId);
         resultIntent.putExtra(GCM_NOTIFICATION_ID, 0);
 
         // TaskStack allows us to go back to Home from the Notification action
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        stackBuilder.addParentStack(MainActivity.class);
+        if(gcmSyncMessage != null) {
+            stackBuilder.addParentStack(GenesysSampleActivity.class);
+        } else {
+            stackBuilder.addParentStack(GenesysChatActivity.class);
+        }
         stackBuilder.addNextIntent(resultIntent);
         PendingIntent resultPendingIntent =
             stackBuilder.getPendingIntent(
@@ -160,7 +183,7 @@ public class GcmManager {
          * Force notification ID to 0 to prevent creating new entries in the
          * notification drawer.
          */
-        //getNotificationManager().notify(0, builder.build());
+        getNotificationManager().notify(0, builder.build());
     }
 
 

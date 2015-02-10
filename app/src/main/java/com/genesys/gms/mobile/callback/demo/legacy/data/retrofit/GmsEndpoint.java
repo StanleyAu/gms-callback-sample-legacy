@@ -3,11 +3,14 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.retrofit;
 import android.util.Log;
 import retrofit.Endpoint;
 
+import javax.inject.Singleton;
+
 /**
  * Custom Retrofit Endpoint for dynamic redefinition of endpoint address
  * without having to perform an expensive rebuild of the RestAdapter
  * See answer from JakeWharton: http://stackoverflow.com/a/23279628
  */
+@Singleton
 public class GmsEndpoint implements Endpoint {
     private static final String ENDPOINT_HOST = "endpoint_host";
     private static final String ENDPOINT_PORT = "endpoint_port";

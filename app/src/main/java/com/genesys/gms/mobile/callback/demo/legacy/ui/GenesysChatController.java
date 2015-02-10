@@ -2,6 +2,7 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.ForActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.client.ChatEvent;
@@ -9,12 +10,10 @@ import com.genesys.gms.mobile.callback.demo.legacy.client.CometClient;
 import com.genesys.gms.mobile.callback.demo.legacy.client.CometHandler;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatCometResponse;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatResponse;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatState;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatDisconnectEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatResponseEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatResponseEvent.ChatRequestType;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatStartEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.ChatTranscriptEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -43,9 +42,21 @@ public class GenesysChatController implements CometHandler {
     private CometClient cometClient;
 
     // Should store below in a separate Model
+    // TODO: Does this controller retain state following orientation change?
     private String sessionId;
     private String serverUrl;
     private String subject;
+
+    @Override public String toString() {
+        // For debugging
+        return getClass().getName() + "@" + hashCode() +
+            "[" +
+            "cometClient=" + cometClient +
+            ",sessionId=" + sessionId +
+            ",serverUrl=" + serverUrl +
+            ",subject=" + subject +
+            "]";
+    }
 
     @Inject
     public GenesysChatController(@ForActivity Context context,
@@ -57,6 +68,17 @@ public class GenesysChatController implements CometHandler {
         this.cometClient = new CometClient(httpClient, this);
         this.gson = gson;
         this.bus = EventBus.getDefault();
+    }
+
+    public void persistState(Bundle outState) {
+        // Nothing to do
+    }
+
+    public void restoreState(Bundle inState) {
+        // From GenesysChatActivity
+        sessionId = inState.getString("chatId");
+        serverUrl = inState.getString("cometUrl");
+        subject = inState.getString("subject");
     }
 
     // TODO: Functionality first, refactor later.
@@ -76,6 +98,7 @@ public class GenesysChatController implements CometHandler {
     public void startChat(String sessionId, String subject) {
         this.sessionId = sessionId;
         this.subject = subject;
+        Log.d("GenesysChatController", "Starting chat service.");
         bus.post(new ChatStartEvent(
             sessionId,
             true,
@@ -99,14 +122,28 @@ public class GenesysChatController implements CometHandler {
         }
     }
 
+    public void sendText(String text) {
+        bus.post(new ChatSendEvent(sessionId, text, true));
+    }
+
+    public void startTyping() {
+        bus.post(new ChatStartTypingEvent(sessionId, true));
+    }
+
+    public void stopTyping() {
+        bus.post(new ChatStopTypingEvent(sessionId, true));
+    }
+
     @Override
     public void onConnect() {
         // Bayeux client connected
+        Log.d("GenesysChatController", "Comet client is connected.");
     }
 
     @Override
     public void onDisconnect() {
         // Bayeux client disconnected
+        Log.d("GenesysChatController", "Comet client is disconnected.");
     }
 
     @Override
@@ -118,8 +155,9 @@ public class GenesysChatController implements CometHandler {
             Log.e("GenesysChatController", "Exception while parsing Comet message: " + e);
             return;
         }
+        ChatResponse chatResponse = null;
         try {
-            ChatResponse chatResponse = chatCometResponse.getData().getMessage();
+            chatResponse = chatCometResponse.getData().getMessage();
             int transcriptPosition = chatResponse.getTranscriptPosition();
             if(transcriptPosition <= cometClient.getTranscriptPosition()) {
                 log.debug("Comet client is ahead of server!");
@@ -132,6 +170,11 @@ public class GenesysChatController implements CometHandler {
             }
         } catch (NullPointerException e) {
             Log.e("GenesysChatController", "Failed to process transcript entries: " + e);
+        }
+        if(chatResponse != null) {
+            if(chatResponse.getChatIxnState() == ChatState.DISCONNECTED) {
+                bus.post(new ChatResponseEvent(chatResponse, ChatRequestType.DISCONNECT));
+            }
         }
     }
 
