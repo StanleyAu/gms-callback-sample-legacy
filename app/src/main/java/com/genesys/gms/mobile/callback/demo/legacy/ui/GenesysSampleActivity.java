@@ -393,9 +393,10 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     public void onEventMainThread(CallbackDialogDoneEvent event) {
         if(event.success) {
             controller.handleDialog(event.callbackDialog);
+        } else {
+            // TODO: Otherwise, show error
+            Toast.makeText(this, "Unknown dialog error, check logs.", Toast.LENGTH_SHORT).show();
         }
-        // TODO: Otherwise, show error
-        Toast.makeText(this, "Unknown dialog error, check logs.", Toast.LENGTH_SHORT).show();
     }
 
     @DebugLog
@@ -406,9 +407,10 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         }
         if(event.success) {
             controller.updateQueuePosition(event.callbackQueuePosition);
+        } else {
+            // TODO: Otherwise, show error
+            Toast.makeText(this, "Unable to check queue!", Toast.LENGTH_SHORT).show();
         }
-        // TODO: Otherwise, show error
-        Toast.makeText(this, "Unable to check queue!", Toast.LENGTH_SHORT).show();
     }
 
     public void onEventMainThread(CallbackErrorEvent event) {
