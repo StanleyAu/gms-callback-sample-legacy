@@ -27,6 +27,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import android.widget.Toast;
 import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
@@ -352,5 +353,6 @@ public class GenesysChatActivity extends BaseActivity {
 
     public void onEventMainThread(ChatErrorEvent event) {
         Log.e("GenesysChatActivity", "Chat Error encountered: " + event.chatException);
+        Toast.makeText(this, event.chatException.getMessage(), Toast.LENGTH_SHORT).show();
     }
 }

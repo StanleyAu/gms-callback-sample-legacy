@@ -408,6 +408,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
             controller.updateQueuePosition(event.callbackQueuePosition);
         }
         // TODO: Otherwise, show error
+        Toast.makeText(this, "Unable to check queue!", Toast.LENGTH_SHORT).show();
     }
 
     public void onEventMainThread(CallbackErrorEvent event) {
@@ -456,6 +457,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         if(item != null) {
             item.setEnabled(true);
         }
+        Toast.makeText(this, event.error.getMessage(), Toast.LENGTH_SHORT).show();
     }
 
     /** EVENT HANDLERS STOP HERE **/
