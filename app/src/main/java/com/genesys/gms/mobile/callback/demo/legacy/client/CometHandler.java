@@ -5,6 +5,7 @@ import org.cometd.bayeux.client.ClientSessionChannel;
 
 /**
  * Created by stau on 2/9/2015.
+ * Used in conjunction with {@link com.genesys.gms.mobile.callback.demo.legacy.client.CometClient}
  */
 public interface CometHandler {
     public void onConnect();

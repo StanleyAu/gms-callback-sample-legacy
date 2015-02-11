@@ -1,6 +1,5 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -8,13 +7,14 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
+import android.support.v4.app.NotificationManagerCompat;
+import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysChatActivity;
-import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysSampleActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -46,11 +46,11 @@ public class GcmManager {
     private static final String PROPERTY_APP_VERSION = "app_version";
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
-    NotificationManager mNotificationManager;
+    NotificationManagerCompat mNotificationManager;
     // private static final long[] VIBRATE_PATTERN = {350L, 200L, 350L};
     public static final String GCM_NOTIFICATION_ID = "gcm_notification_id";
 
-    @Inject
+    @Inject @DebugLog
     public GcmManager(GoogleCloudMessaging googleCloudMessaging, Gson gson, SharedPreferences sharedPreferences, @ForApplication Context context) {
         this.googleCloudMessaging = googleCloudMessaging;
         this.gson = gson;
@@ -59,7 +59,6 @@ public class GcmManager {
         this.context = context;
     }
 
-    @DebugLog
     public void onEventAsync(GcmRegisterEvent event) {
         if( !checkPlayServices() ) {
             // Google Play Services not available
@@ -90,7 +89,6 @@ public class GcmManager {
         }
     }
 
-    @DebugLog
     public void onEventAsync(GcmUnregisterEvent event) {
         //Timber.i("Handling GCM unregister request: " + event.toString());
         if( !checkPlayServices() ) {
@@ -140,17 +138,23 @@ public class GcmManager {
     @DebugLog
     public void onEvent(NoSubscriberEvent event) {
         if(!(event.originalEvent instanceof GcmReceiveEvent)) {
+            Log.d("GcmManager", event.originalEvent.toString());
             return;
         }
         GcmReceiveEvent gcmReceiveEvent = (GcmReceiveEvent)event.originalEvent;
         String message = gcmReceiveEvent.extras.getString("message");
         GcmSyncMessage gcmSyncMessage = null;
         try {
-            gcmSyncMessage = gson.fromJson(message.toString(), GcmSyncMessage.class);
-            message = "Callback needs attention!";
+            gcmSyncMessage = gson.fromJson(message, GcmSyncMessage.class);
         } catch(JsonSyntaxException e) {
-            // Likely a GMS chat poke
+            Log.e("GcmManager", "Unable to parse GCM message", e);
         }
+
+        /*
+        Intent resultIntent = new Intent(context, GenesysChatActivity.class);
+        resultIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        context.startActivity(resultIntent);
+        */
 
         NotificationCompat.Builder builder =
             getNotificationBuilder(
@@ -159,38 +163,27 @@ public class GcmManager {
                 message
             );
 
+        builder.setOngoing(true);
         // int notificationId = mNotifyId.getAndIncrement();
         Intent resultIntent = new Intent(context, GenesysChatActivity.class);
         //resultIntent.putExtra(GCM_NOTIFICATION_ID, notificationId);
-        resultIntent.putExtra(GCM_NOTIFICATION_ID, 0);
-
-        // TaskStack allows us to go back to Home from the Notification action
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        if(gcmSyncMessage != null) {
-            stackBuilder.addParentStack(GenesysSampleActivity.class);
-        } else {
-            stackBuilder.addParentStack(GenesysChatActivity.class);
-        }
-        stackBuilder.addNextIntent(resultIntent);
-        PendingIntent resultPendingIntent =
-            stackBuilder.getPendingIntent(
-                0,
-                PendingIntent.FLAG_UPDATE_CURRENT
-            );
+        //resultIntent.putExtra(GCM_NOTIFICATION_ID, 0);
+        resultIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        //TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
+        //stackBuilder.addParentStack(GenesysChatActivity.class);
+        //stackBuilder.addNextIntent(resultIntent);
+        //PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(
+        //    0, PendingIntent.FLAG_UPDATE_CURRENT
+        //);
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(context, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(resultPendingIntent);
         //getNotificationManager().notify(notificationId, builder.build());
-        /*
-         * Force notification ID to 0 to prevent creating new entries in the
-         * notification drawer.
-         */
         getNotificationManager().notify(0, builder.build());
     }
 
-
-
-    protected NotificationManager getNotificationManager() {
+    protected NotificationManagerCompat getNotificationManager() {
         if(mNotificationManager==null) {
-            mNotificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+            mNotificationManager = NotificationManagerCompat.from(context);
         }
         return mNotificationManager;
     }

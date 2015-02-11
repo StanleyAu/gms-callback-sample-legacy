@@ -14,6 +14,7 @@ import retrofit.RestAdapter;
 import retrofit.client.Client;
 import retrofit.client.OkClient;
 import retrofit.converter.GsonConverter;
+import timber.log.Timber;
 
 import javax.inject.Singleton;
 
@@ -47,7 +48,6 @@ public class ApiModule {
 
     @Provides @Singleton
     GmsRequestInterceptor provideRequestInterceptor(SharedPreferences sharedPreferences) {
-        Log.d("GmsRequestInterceptor", "Constructing new GmsRequestInterceptor");
         GmsRequestInterceptor gmsRequestInterceptor = new GmsRequestInterceptor();
         String gmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
         gmsRequestInterceptor.setGmsUser(gmsUser);
@@ -71,7 +71,8 @@ public class ApiModule {
                 .setLog(new RestAdapter.Log() {
                     @Override
                     public void log(String msg) {
-                        Log.d("Retrofit", msg);
+                        Timber.tag("Retrofit");
+                        Timber.d("msg");
                     }
                 });
         }

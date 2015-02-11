@@ -79,7 +79,7 @@ public class GenesysChatController implements CometHandler {
 
     public void restoreState(Bundle inState) {
         // From GenesysChatActivity
-        sessionId = inState.getString("chatId");
+        sessionId = inState.getString("sessionId");
         serverUrl = inState.getString("cometUrl");
         subject = inState.getString("subject");
     }

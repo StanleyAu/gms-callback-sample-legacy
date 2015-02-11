@@ -7,6 +7,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 import java.util.Arrays;
@@ -31,10 +32,10 @@ public class App extends Application {
         Globals.setupLogging(this);
 
         if (BuildConfig.DEBUG) {
-            //Timber.plant(new Timber.DebugTree());
+            Timber.plant(new Timber.DebugTree());
         } else {
             // TODO: Figure out release logging
-            //Timber.plant(new Timber.HollowTree());
+            Timber.plant(new Timber.HollowTree());
         }
     }
 

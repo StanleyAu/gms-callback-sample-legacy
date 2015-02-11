@@ -1,6 +1,7 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.retrofit;
 
 import android.util.Log;
+import hugo.weaving.DebugLog;
 import retrofit.RequestInterceptor;
 
 import javax.inject.Singleton;
@@ -13,9 +14,9 @@ public class GmsRequestInterceptor implements RequestInterceptor {
     private static final String GMS_USER = "gms_user";
     private String gmsUser;
 
+    @DebugLog
     public GmsRequestInterceptor() {
         super();
-        Log.d("GmsRequestInterceptor", "Constructing new instance.");
     }
 
     public String getGmsUser() {

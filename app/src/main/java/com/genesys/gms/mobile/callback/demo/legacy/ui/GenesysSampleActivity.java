@@ -76,9 +76,13 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
     }
 
 	@Override @DebugLog
-	public void onCreate(Bundle savedInstanceState) {
-	    super.onCreate(savedInstanceState);
+	public void onCreate(Bundle inState) {
+	    super.onCreate(inState);
 		LoggingExceptionHandler.setDefaultUncaughtExceptionHandler(log);
+
+        if(inState != null) {
+            controller.restoreState(inState);
+        }
 	}
 
 	@DebugLog
@@ -171,6 +175,12 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
         bus.unregister(this);
         super.onPause();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        controller.persistState(outState);
+        super.onSaveInstanceState(outState);
     }
 
     // Hack to deal with convoluted lifecycles (until this is reorganized)
@@ -324,7 +334,11 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
             CallbackDialog callbackDialog = gson.fromJson(dialogData, CallbackDialog.class);
             Log.d("TEST_VALUE", callbackDialog.toString());
             */
-            Log.d("TEST_VALUE", "Nothing to show :)");
+            Log.d("TEST_VALUE", "Starting Chat Activity");
+            Intent intent = new Intent(this, GenesysChatActivity.class);
+            intent.setAction(Globals.ACTION_GENESYS_START_CHAT);
+            intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            this.startActivity(intent);
             return true;
         }
         return true;
@@ -448,8 +462,10 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
         } catch (JsonSyntaxException e) {
             // TODO: Failed to parse cloud message, can't interpret
         }
-        if(gcmSyncMessage != null) {
+        if(gcmSyncMessage != null && gcmSyncMessage.getAction() != null) {
             controller.handleGcmMessage(gcmSyncMessage);
+        } else {
+            // TODO: Handle a Chat notification in foreground
         }
     }
 

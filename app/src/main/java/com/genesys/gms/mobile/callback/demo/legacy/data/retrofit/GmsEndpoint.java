@@ -1,6 +1,7 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.retrofit;
 
 import android.util.Log;
+import hugo.weaving.DebugLog;
 import retrofit.Endpoint;
 
 import javax.inject.Singleton;
@@ -16,6 +17,11 @@ public class GmsEndpoint implements Endpoint {
     private static final String ENDPOINT_PORT = "endpoint_port";
     private static final String ENDPOINT_API_VERSION = "endpoint_api_version";
     private String m_strUrl;
+
+    @DebugLog
+    public GmsEndpoint() {
+        super();
+    }
 
     @Override
     public String getName() {

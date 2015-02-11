@@ -20,16 +20,20 @@
 
         <activity
             android:name=".ui.GenesysChatActivity"
-            android:label="@string/title_activity_chat" >
+            android:label="@string/title_activity_chat"
+            android:launchMode="singleTop"
+            >
         </activity>
 
         <activity
             android:name=".ui.GenesysSampleActivity"
             android:label="@string/title_activity_genesys_sample"
-            android:launchMode="singleTask" >
+            android:launchMode="singleTop"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
 

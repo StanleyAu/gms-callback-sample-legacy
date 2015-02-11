@@ -9,7 +9,7 @@ public enum ChatEvent {
     @SerializedName("Message.Text") MESSAGE,
     @SerializedName("Notice.Joined") PARTY_JOINED,
     @SerializedName("Notice.Left") PARTY_LEFT,
-    @SerializedName("Notice.TypingStart") TYPING_STARTED,
-    @SerializedName("Notice.TypingStop") TYPING_STOPPED,
+    @SerializedName("Notice.TypingStarted") TYPING_STARTED,
+    @SerializedName("Notice.TypingStopped") TYPING_STOPPED,
     @SerializedName("Notice.PushUrl") PUSH_URL
 }

@@ -30,7 +30,7 @@ public class Globals {
 	public static final String EXTRA_COMET_URL = "com.genesys.gms.mobile.callback.demo.legacy.extra.CometUrl";
 	public static final String EXTRA_SUBJECT = "com.genesys.gms.mobile.callback.demo.legacy.extra.Subject";
 	public static final String EXTRA_REQUEST_TYPE = "com.genesys.gms.mobile.callback.demo.legacy.extra.RequestType";
-    public static final String EXTRA_CHAT_ID = "com.genesys.gms.mobile.callback.demo.legacy.extra.ChatId";
+    public static final String EXTRA_SESSION_ID = "com.genesys.gms.mobile.callback.demo.legacy.extra.ChatId";
 
     public static final String PROPERTY_HOST = "com.genesys.gms.mobile.callback.demo.legacy.property.Host";
     public static final String PROPERTY_PORT = "com.genesys.gms.mobile.callback.demo.legacy.property.Port";

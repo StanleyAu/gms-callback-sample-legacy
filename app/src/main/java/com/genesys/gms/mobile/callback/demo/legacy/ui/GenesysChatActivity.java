@@ -5,6 +5,7 @@ import java.util.concurrent.*;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
@@ -49,6 +50,7 @@ public class GenesysChatActivity extends BaseActivity {
 		}
 	};
 
+    @Inject SharedPreferences sharedPreferences;
     @Inject GenesysChatController controller;
     private final EventBus bus;
 
@@ -62,7 +64,7 @@ public class GenesysChatActivity extends BaseActivity {
     private boolean userTyping;
 
     private String cometUrl;
-    private String chatId;
+    private String sessionId;
     private String subject;
 
     @DebugLog
@@ -70,7 +72,22 @@ public class GenesysChatActivity extends BaseActivity {
         this.bus = EventBus.getDefault();
     }
 
-	@Override
+    @Override @DebugLog
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Log.d("GenesysChatActivity",
+            "Action: " + intent.getAction() +
+                ",Categories: " + intent.getCategories() +
+                ",Flags: " + intent.getFlags()
+        );
+    }
+
+    @Override @DebugLog
 	protected void onCreate(Bundle inState) {
         super.onCreate(inState);
 
@@ -79,11 +96,10 @@ public class GenesysChatActivity extends BaseActivity {
         if (inState == null) {
             if (Globals.ACTION_GENESYS_START_CHAT.equals(intent.getAction())) {
                 cometUrl = intent.getStringExtra(Globals.EXTRA_COMET_URL);
-
-                chatId = intent.getStringExtra(Globals.EXTRA_CHAT_ID);
+                sessionId = intent.getStringExtra(Globals.EXTRA_SESSION_ID);
                 subject = intent.getStringExtra(Globals.EXTRA_SUBJECT);
-                if (chatId != null && subject != null) {
-                    controller.startChat(chatId, subject);
+                if (sessionId != null && subject != null) {
+                    controller.startChat(sessionId, subject);
                 }
             } else {
                 Bundle extras = intent.getExtras();
@@ -98,20 +114,32 @@ public class GenesysChatActivity extends BaseActivity {
                     }
                 }
             }
+            sharedPreferences.edit()
+                .putBoolean("CHAT_chatFinished", chatFinished)
+                .putString("CHAT_cometUrl", cometUrl)
+                .putString("CHAT_sessionId", sessionId)
+                .putString("CHAT_subject", subject)
+                .apply();
         }
 
         setupUi();
 
-        if(inState != null) {
-            chatFinished = inState.getBoolean("chatFinished");
-            cometUrl = inState.getString("cometUrl");
-            chatId = inState.getString("chatId");
-            subject = inState.getString("subject");
-            transcriptTextView.setText(inState.getCharSequence("transcript"));
-            sendEditText.setText(inState.getString("sendEditText"));
-
-            controller.restoreState(inState);
+        if(inState == null) {
+            Log.d("GenesysChatActivity", "Attempting to restore state from persistence.");
+            inState = new Bundle();
+            inState.putBoolean("chatFinished", sharedPreferences.getBoolean("CHAT_chatFinished", false));
+            inState.putString("chatFinished", sharedPreferences.getString("CHAT_cometUrl", null));
+            inState.putString("sessionId", sharedPreferences.getString("CHAT_sessionId", null));
+            inState.putString("subject", sharedPreferences.getString("CHAT_subject", null));
         }
+        chatFinished = inState.getBoolean("chatFinished");
+        cometUrl = inState.getString("cometUrl");
+        sessionId = inState.getString("sessionId");
+        subject = inState.getString("subject");
+        transcriptTextView.setText(inState.getCharSequence("transcript"));
+        sendEditText.setText(inState.getString("sendEditText"));
+
+        controller.restoreState(inState);
 	}
 
     @Override
@@ -124,7 +152,7 @@ public class GenesysChatActivity extends BaseActivity {
     protected void onSaveInstanceState(Bundle outState) {
         outState.putBoolean("chatFinished", chatFinished);
         outState.putString("cometUrl", cometUrl);
-        outState.putString("chatId", chatId);
+        outState.putString("sessionId", sessionId);
         outState.putString("subject", subject);
         outState.putCharSequence("transcript", transcriptTextView.getText());
         outState.putString("sendEditText", sendEditText.getText().toString());

@@ -10,6 +10,9 @@ import org.cometd.client.transport.ClientTransport;
 import org.cometd.client.transport.LongPollingTransport;
 import org.eclipse.jetty.client.ContentExchange;
 import org.eclipse.jetty.client.HttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 import java.util.HashMap;
@@ -20,6 +23,7 @@ import java.util.Map;
  */
 public class CometClient {
     public static final String GMS_USER = "gms_user";
+    public static final String GENESYS_CHANNEL = "/_genesys";
     private final HttpClient httpClient;
     private BayeuxClient bayeuxClient;
     private CometHandler handler;
@@ -55,7 +59,7 @@ public class CometClient {
                 protected void customize(ContentExchange contentExchange) {
                     super.customize(contentExchange);
                     if (gmsUser != null && !gmsUser.isEmpty()) {
-                        Log.d("CometClient", "Adding " + GMS_USER + ": " + gmsUser + " header.");
+                        Timber.d("Adding %s: %s header.", GMS_USER, gmsUser);
                         contentExchange.addRequestHeader(GMS_USER, gmsUser);
                     }
                 }
@@ -71,12 +75,12 @@ public class CometClient {
             if (!handshakeSuccess)
                 throw new RuntimeException("CometD handshake did not succeed");
 
-            bayeuxClient.getChannel("/_genesys").subscribe(new ClientSessionChannel.MessageListener() {
+            bayeuxClient.getChannel(GENESYS_CHANNEL).subscribe(new ClientSessionChannel.MessageListener() {
                 @Override public void onMessage(ClientSessionChannel channel, Message message) {
                     try {
                         handler.onMessage(channel, message);
                     } catch (Exception e) {
-                        Log.e("CometClient", "Error handling comet message", e);
+                        Timber.e(e, "Error handling comet message.");
                     }
                 }
             });
@@ -91,7 +95,7 @@ public class CometClient {
                     @Override
                     public void onMessage(ClientSessionChannel channel, Message message) {
                         if (message.isSuccessful()) {
-                            Log.d("CometClient", "Handshake successful, adding subs");
+                            Timber.d("Handshake successful, adding subs.");
                             addSubscriptions();
                         }
                     }
@@ -131,7 +135,7 @@ public class CometClient {
         bayeuxClient.batch(new Runnable() {
             @Override
             public void run() {
-                bayeuxClient.getChannel("/_genesys").subscribe(new ClientSessionChannel.MessageListener() {
+                bayeuxClient.getChannel(GENESYS_CHANNEL).subscribe(new ClientSessionChannel.MessageListener() {
                     @Override public void onMessage(ClientSessionChannel channel, Message message) {
                         handler.onMessage(channel, message);
                     }
@@ -145,7 +149,7 @@ public class CometClient {
             @Override
             public boolean sendMeta(ClientSession session, Message.Mutable message) {
                 if(Channel.META_DISCONNECT.equals(message.getChannel())) {
-                    Log.d("CometClient", "Inserting transcriptPosition ext");
+                    Timber.d("Inserting transcriptPosition ext=%d", transcriptPosition);
                     Map<String,Object> ext = message.getExt(true);
                     // TODO: Use hook to retrieve value
                     ext.put("transcriptPosition", transcriptPosition);

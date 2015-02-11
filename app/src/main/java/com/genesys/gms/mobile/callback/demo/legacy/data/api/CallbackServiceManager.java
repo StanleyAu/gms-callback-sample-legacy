@@ -20,6 +20,7 @@ import org.joda.time.DateTime;
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -46,7 +47,7 @@ public class CallbackServiceManager {
     private final EventBus bus;
     private final SharedPreferences sharedPreferences;
 
-    @DebugLog @Inject
+    @Inject @DebugLog
     public CallbackServiceManager(CallbackService callbackService,
                                   GmsEndpoint gmsEndpoint,
                                   OkHttpClient httpClient,
@@ -169,7 +170,6 @@ public class CallbackServiceManager {
         });
     }
 
-    @DebugLog
     public void onEvent(CallbackAvailabilityEvent event) {
         callbackService.queryAvailability(
             event.serviceName,
@@ -256,10 +256,10 @@ public class CallbackServiceManager {
                         callbackDialog = gson.fromJson(response.body().charStream(), CallbackDialog.class);
                         success = true;
                     } catch (Exception e) {
-                        Log.e("CallbackServiceManager", "Exception while parsing Dialog response: " + e);
+                        Timber.e(e, "Exception while parsing Dialog response.");
                     }
                 } else {
-                    Log.e("CallbackServiceManager", "Negative response for Dialog request: " + response);
+                    Timber.e("Negative response for Dialog request: %s", response);
                 }
                 bus.post(new CallbackDialogDoneEvent(success, callbackDialog));
             }
@@ -315,10 +315,10 @@ public class CallbackServiceManager {
                         callbackQueuePosition = gson.fromJson(response.body().charStream(), CallbackQueuePosition.class);
                         success = true;
                     } catch (Exception e) {
-                        Log.e("CallbackServiceManager", "Exception while parsing CheckQueue response: " + e);
+                        Timber.e(e, "Exception while parsing CheckQueue response.");
                     }
                 } else {
-                    Log.e("CallbackServiceManager", "Negative response for CheckQueue request: " + response);
+                    Timber.e("Negative response for CheckQueue request: %s", response);
                 }
                 bus.post(new CallbackCheckQueueDoneEvent(success, callbackQueuePosition));
             }

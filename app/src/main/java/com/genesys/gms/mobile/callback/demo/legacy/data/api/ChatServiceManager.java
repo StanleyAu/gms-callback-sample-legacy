@@ -6,6 +6,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatResponse;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.*;
 import de.greenrobot.event.EventBus;
+import hugo.weaving.DebugLog;
 import retrofit.Callback;
 import retrofit.RetrofitError;
 import retrofit.client.Response;
@@ -21,7 +22,7 @@ public class ChatServiceManager {
     private final ChatService chatService;
     private final EventBus bus;
 
-    @Inject
+    @Inject @DebugLog
     public ChatServiceManager(ChatService chatService) {
         this.chatService = chatService;
         this.bus = EventBus.getDefault();

@@ -2,6 +2,7 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import java.util.*;
 
+import android.os.Bundle;
 import android.preference.ListPreference;
 import android.support.v4.preference.PreferenceFragment;
 import android.util.Log;
@@ -15,7 +16,6 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.Callback
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackCheckQueueEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackDialogEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.CallbackStartEvent;
-import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import de.greenrobot.event.EventBus;
@@ -51,6 +51,14 @@ public class GenesysSampleController {
         this.sharedPreferences = sharedPreferences;
         this.bus = EventBus.getDefault();
 	}
+
+    public void persistState(Bundle outState) {
+        outState.putString("sessionId", sessionId);
+    }
+
+    public void restoreState(Bundle inState) {
+        sessionId = inState.getString("sessionId");
+    }
 
 	public void connect() {
         Map<String, String> params = new HashMap<String, String>();
@@ -160,12 +168,19 @@ public class GenesysSampleController {
                 builder.create().show();
                 break;
             case CHAT:
+                sharedPreferences.edit()
+                    .remove("CHAT_chatFinished")
+                    .remove("CHAT_cometUrl")
+                    .remove("CHAT_sessionId")
+                    .remove("CHAT_subject")
+                    .apply();
                 Intent intent = new Intent(context, GenesysChatActivity.class);
                 intent.setAction(Globals.ACTION_GENESYS_START_CHAT);
                 // intent.putExtra(Globals.EXTRA_CHAT_URL, dialog.getStartChatUrl());
                 intent.putExtra(Globals.EXTRA_COMET_URL, dialog.getCometUrl());
                 intent.putExtra(Globals.EXTRA_SUBJECT, dialog.getChatParameters().getSubject());
-                intent.putExtra(Globals.EXTRA_CHAT_ID, dialog.getId());
+                intent.putExtra(Globals.EXTRA_SESSION_ID, dialog.getId());
+                intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 context.startActivity(intent);
                 break;
             case CONFIRM:
