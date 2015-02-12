@@ -12,8 +12,11 @@ import android.support.v4.preference.PreferenceFragment;
 import android.text.InputType;
 import hugo.weaving.DebugLog;
 
+import javax.inject.Inject;
+
 // TODO: A multi-purpose generic fragment is actually more trouble than it's worth
 public class PreferenceWithSummaryFragment extends PreferenceFragment implements OnSharedPreferenceChangeListener {
+    private SharedPreferences sharedPreferences;
 	protected Set<String> excludedPreferences = new HashSet<String>();
 	
 	public static PreferenceWithSummaryFragment create(int preferencesResId) {
@@ -77,6 +80,7 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
     @Override @DebugLog
 	public void onCreate(Bundle savedInstanceState) {
 	    super.onCreate(savedInstanceState);
+        sharedPreferences = getPreferenceManager().getSharedPreferences();
 	    addPreferencesFromResource(getArguments().getInt("preferences"));
 	}
 
@@ -84,7 +88,7 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 	public void onResume() {
 	    super.onResume();
 	    updatePreferenceSummary(getPreferenceScreen());
-	    getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
         // This is bad form but inevitable because we use this generic fragment
         ((GenesysSampleActivity)getActivity()).onFragmentResume(this);
 	}
@@ -93,7 +97,7 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 	public void onPause() {
         // This is bad form but inevitable because we use this generic fragment
         ((GenesysSampleActivity)getActivity()).onFragmentPause(this);
-        getPreferenceScreen().getSharedPreferences().unregisterOnSharedPreferenceChangeListener(this);
+        sharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
 	    super.onPause();
 	}
 
@@ -131,7 +135,7 @@ public class PreferenceWithSummaryFragment extends PreferenceFragment implements
 			}
 		}
 		else {
-			Object value = getPreferenceManager().getSharedPreferences().getAll().get(pref.getKey());
+			Object value = sharedPreferences.getAll().get(pref.getKey());
 			String text = value == null ||
 						  (value instanceof String && ((String) value).isEmpty()) ?
 								"[empty]" :

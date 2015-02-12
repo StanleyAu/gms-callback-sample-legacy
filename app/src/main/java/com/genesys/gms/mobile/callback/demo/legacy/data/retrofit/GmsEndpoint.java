@@ -28,6 +28,7 @@ public class GmsEndpoint implements Endpoint {
         return "default";
     }
 
+    @DebugLog
     public void setUrl(String p_strHost, Integer p_nPort, Integer p_nApiVersion) {
         if(p_strHost == null || p_strHost.isEmpty() || p_nPort == null || p_nApiVersion == null) {
             m_strUrl = null;

@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
@@ -37,6 +38,8 @@ public class LogFragment extends BaseFragment {
 		View view = inflater.inflate(R.layout.log_layout, container, false);
 		logScrollView = (ScrollView)view.findViewById(R.id.logScrollView);
 		logTextView = (TextView)view.findViewById(R.id.logTextView);
+        Typeface typeFace= Typeface.createFromAsset(getActivity().getAssets(), "fonts/DroidSansMono.ttf");
+        logTextView.setTypeface(typeFace);
 		logTextView.setMovementMethod(new ScrollingMovementMethod());
 		Button clearButton = (Button) view.findViewById(R.id.clearButton);
 		clearButton.setOnClickListener(clearButtonClickListener);
@@ -61,10 +64,15 @@ public class LogFragment extends BaseFragment {
 		try {
 			reader = new BufferedReader(new FileReader(logFile));
 		    String line = null;
-			while ((line = reader.readLine()) != null) {
-				logTextView.append(line + "\n");
-			}
-			logScrollView.smoothScrollTo(0, logTextView.getBottom());
+            while ((line = reader.readLine()) != null) {
+                logTextView.append(line + "\n");
+            }
+            logScrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    logScrollView.fullScroll(View.FOCUS_DOWN);
+                }
+            });
 		} catch (FileNotFoundException e) {
 			logTextView.append("Log file not found");
 		} catch (IOException e) {

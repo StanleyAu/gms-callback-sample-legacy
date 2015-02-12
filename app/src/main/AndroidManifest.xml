@@ -49,12 +49,6 @@
         <service
             android:name=".data.push.GcmIntentService" />
 
-        <service
-            android:name=".ui.GenesysService"
-            android:exported="false"
-            android:label="Genesys Service" >
-        </service>
-
         <activity
             android:name=".ui.LogActivity"
             android:label="@string/title_activity_log" >

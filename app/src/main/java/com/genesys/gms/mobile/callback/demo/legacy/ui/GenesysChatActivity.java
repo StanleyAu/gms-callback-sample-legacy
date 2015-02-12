@@ -2,14 +2,13 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import java.util.concurrent.*;
 
-import android.app.NotificationManager;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
@@ -17,7 +16,6 @@ import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -33,10 +31,10 @@ import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.chat.*;
-import com.genesys.gms.mobile.callback.demo.legacy.data.push.GcmIntentService;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 
@@ -45,7 +43,7 @@ public class GenesysChatActivity extends BaseActivity {
 	private static final ScheduledExecutorService timer = Executors.newScheduledThreadPool(2);
 	
 	private final Executor uiExecutor = new Executor() {
-		@Override public void execute(Runnable command) {
+		@Override public void execute(@NonNull Runnable command) {
 			runOnUiThread(command);
 		}
 	};
@@ -77,16 +75,6 @@ public class GenesysChatActivity extends BaseActivity {
         super.onDestroy();
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        Log.d("GenesysChatActivity",
-            "Action: " + intent.getAction() +
-                ",Categories: " + intent.getCategories() +
-                ",Flags: " + intent.getFlags()
-        );
-    }
-
     @Override @DebugLog
 	protected void onCreate(Bundle inState) {
         super.onCreate(inState);
@@ -101,31 +89,21 @@ public class GenesysChatActivity extends BaseActivity {
                 if (sessionId != null && subject != null) {
                     controller.startChat(sessionId, subject);
                 }
-            } else {
-                Bundle extras = intent.getExtras();
-                if (extras != null) {
-                    // Determine if activity was started as a result of GCM notification
-                    int notificationId = extras.getInt(GcmIntentService.GCM_NOTIFICATION_ID, -1);
-                    if (notificationId != -1) {
-                        Log.i("GenesysChatActivity", "Clearing notification with ID " + notificationId + " from drawer.");
-                        // Remove the notification from the Notification Drawer
-                        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                        manager.cancel(notificationId);
-                    }
-                }
+
+                // Persist state in case of unexpected app termination
+                sharedPreferences.edit()
+                    .putBoolean("CHAT_chatFinished", chatFinished)
+                    .putString("CHAT_cometUrl", cometUrl)
+                    .putString("CHAT_sessionId", sessionId)
+                    .putString("CHAT_subject", subject)
+                    .apply();
             }
-            sharedPreferences.edit()
-                .putBoolean("CHAT_chatFinished", chatFinished)
-                .putString("CHAT_cometUrl", cometUrl)
-                .putString("CHAT_sessionId", sessionId)
-                .putString("CHAT_subject", subject)
-                .apply();
         }
 
         setupUi();
 
         if(inState == null) {
-            Log.d("GenesysChatActivity", "Attempting to restore state from persistence.");
+            Timber.d("Attempt to restore Chat state from persistence.");
             inState = new Bundle();
             inState.putBoolean("chatFinished", sharedPreferences.getBoolean("CHAT_chatFinished", false));
             inState.putString("chatFinished", sharedPreferences.getString("CHAT_cometUrl", null));
@@ -177,7 +155,6 @@ public class GenesysChatActivity extends BaseActivity {
                 }
             }.execute();
         }
-        Log.d("GenesysChatActivity", "controller: " + controller);
     }
 
     @Override
@@ -216,6 +193,11 @@ public class GenesysChatActivity extends BaseActivity {
                 if(!userTyping) {
                     userTyping = true;
                     controller.startTyping();
+
+                    if(scheduledStopTypingMessage != null && !scheduledStopTypingMessage.isDone()) {
+                        scheduledStopTypingMessage.cancel(false);
+                        scheduledStopTypingMessage = null;
+                    }
                 }
             }
             @Override public void afterTextChanged(Editable s) {
@@ -267,7 +249,7 @@ public class GenesysChatActivity extends BaseActivity {
 	
 	private final Runnable wipeInformationalMessage = new Runnable() {
 		@Override public void run() {
-			uiExecutor.equals(new Runnable() {
+			uiExecutor.execute(new Runnable() {
 				@Override public void run() {
 					setInformationalMessageImpl("");
 				}
@@ -296,8 +278,7 @@ public class GenesysChatActivity extends BaseActivity {
 	
 	private void showInfoImpl(String text, boolean permanent) {
 		if (scheduledWipeInformationalMessage != null) {
-			boolean mayInterruptIfRunning = false;
-			scheduledWipeInformationalMessage.cancel(mayInterruptIfRunning);
+			scheduledWipeInformationalMessage.cancel(false);
 		}
 		
 		setInformationalMessageImpl(text);
@@ -317,7 +298,6 @@ public class GenesysChatActivity extends BaseActivity {
             if(!chatFinished) {
                 controller.disconnectChat();
             } else {
-                Log.d("GenesysChatActivity", "Ending chat activity.");
                 finish();
             }
         }
@@ -359,7 +339,6 @@ public class GenesysChatActivity extends BaseActivity {
         showPermanentInfo("Chat finished");
     }
 
-    @DebugLog
     public void onEventMainThread(ChatTranscriptEvent event) {
         TranscriptEntry transcriptEntry = event.transcriptEntry;
         switch(transcriptEntry.getChatEvent()) {
@@ -380,7 +359,7 @@ public class GenesysChatActivity extends BaseActivity {
     }
 
     public void onEventMainThread(ChatErrorEvent event) {
-        Log.e("GenesysChatActivity", "Chat Error encountered: " + event.chatException);
+        Timber.e("Chat error encountered: %s", event.chatException);
         Toast.makeText(this, event.chatException.getMessage(), Toast.LENGTH_SHORT).show();
     }
 }

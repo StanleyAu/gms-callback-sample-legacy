@@ -10,11 +10,8 @@ import org.cometd.client.transport.ClientTransport;
 import org.cometd.client.transport.LongPollingTransport;
 import org.eclipse.jetty.client.ContentExchange;
 import org.eclipse.jetty.client.HttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import timber.log.Timber;
 
-import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 

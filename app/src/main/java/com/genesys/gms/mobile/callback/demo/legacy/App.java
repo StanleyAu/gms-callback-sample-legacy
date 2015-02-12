@@ -1,10 +1,12 @@
 package com.genesys.gms.mobile.callback.demo.legacy;
 
 import android.app.Application;
+import android.preference.PreferenceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackServiceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.ChatServiceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
+import com.genesys.gms.mobile.callback.demo.legacy.util.LogbackFacadeTree;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
 import timber.log.Timber;
@@ -32,10 +34,10 @@ public class App extends Application {
         Globals.setupLogging(this);
 
         if (BuildConfig.DEBUG) {
-            Timber.plant(new Timber.DebugTree());
+            Timber.plant(new LogbackFacadeTree(new Timber.DebugTree(), this));
         } else {
             // TODO: Figure out release logging
-            Timber.plant(new Timber.HollowTree());
+            Timber.plant(new LogbackFacadeTree(new Timber.HollowTree(), this));
         }
     }
 
@@ -43,12 +45,6 @@ public class App extends Application {
         bus.register(gcmManager);
         bus.register(callbackServiceManager);
         bus.register(chatServiceManager);
-    }
-
-    public void unregisterManagers() {
-        bus.unregister(gcmManager);
-        bus.unregister(callbackServiceManager);
-        bus.unregister(chatServiceManager);
     }
 
     protected List<Object> getModules() {

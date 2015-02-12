@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.ForActivity;
-import com.genesys.gms.mobile.callback.demo.legacy.client.ChatEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.client.CometClient;
 import com.genesys.gms.mobile.callback.demo.legacy.client.CometHandler;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatCometResponse;
@@ -22,10 +21,7 @@ import hugo.weaving.DebugLog;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSessionChannel;
 import org.eclipse.jetty.client.HttpClient;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 import java.util.List;
@@ -35,9 +31,6 @@ import java.util.List;
  */
 public class GenesysChatController implements CometHandler {
     public static final String PROPERTY_REG_ID = "registration_id";
-    public static final String GMS_USER = "gms_user";
-    private final Logger log = LoggerFactory.getLogger(Globals.GENESYS_LOG_TAG);
-    private final Context context;
     private final SharedPreferences sharedPreferences;
     private final EventBus bus;
     private final Gson gson;
@@ -62,11 +55,9 @@ public class GenesysChatController implements CometHandler {
     }
 
     @Inject
-    public GenesysChatController(@ForActivity Context context,
-                                 SharedPreferences sharedPreferences,
+    public GenesysChatController(SharedPreferences sharedPreferences,
                                  HttpClient httpClient,
                                  Gson gson) {
-        this.context = context;
         this.sharedPreferences = sharedPreferences;
         this.cometClient = new CometClient(httpClient, this);
         this.gson = gson;
@@ -101,7 +92,7 @@ public class GenesysChatController implements CometHandler {
     public void startChat(String sessionId, String subject) {
         this.sessionId = sessionId;
         this.subject = subject;
-        Log.d("GenesysChatController", "Starting chat service.");
+        Timber.d("Starting chat service.");
         bus.post(new ChatStartEvent(
             sessionId,
             true,
@@ -121,6 +112,7 @@ public class GenesysChatController implements CometHandler {
 
     public void disconnectChat() {
         if(sessionId != null && !sessionId.isEmpty()) {
+            Timber.d("Disconnecting chat service.");
             bus.post(new ChatDisconnectEvent(sessionId, true));
         }
     }
@@ -140,63 +132,44 @@ public class GenesysChatController implements CometHandler {
     @Override
     public void onConnect() {
         // Bayeux client connected
-        Log.d("GenesysChatController", "Comet client is connected.");
+        Timber.d("Comet client is connected.");
     }
 
     @Override
     public void onDisconnect() {
         // Bayeux client disconnected
-        Log.d("GenesysChatController", "Comet client is disconnected.");
+        Timber.d("Comet client is disconnected.");
     }
 
     @Override @DebugLog
     public void onMessage(ClientSessionChannel channel, Message message) {
-        ChatCometResponse chatCometResponse;
+        ChatCometResponse chatCometResponse = null;
+        Timber.d("Message from CometD: %s", message.getJSON());
         try {
-            Log.d("GenesysChatController", "Message from comet: " + message.getJSON());
             chatCometResponse = gson.fromJson(message.getJSON(), ChatCometResponse.class);
-            Log.d("GenesysChatController", "Parsed ChatCometResponse: " + chatCometResponse);
-
-            try {
-                JSONObject jsonData = new JSONObject(message.getJSON());
-                JSONObject jsonMessage = jsonData.getJSONObject("data").getJSONObject("message");
-                ChatResponse chatResponse = gson.fromJson(jsonMessage.toString(), ChatResponse.class);
-                Log.d("GenesysChatController", "Parsed ChatResponse: " + chatResponse);
-            } catch(JSONException e) {
-                Log.e("GenesysChatController", "Exception while parsing JSON chat response", e);
-            }
+            Timber.d("Parsed ChatCometResponse: %s", chatCometResponse);
         } catch (JsonSyntaxException e) {
-            Log.e("GenesysChatController", "Exception while parsing Comet message", e);
+            Timber.e(e, "Failed to parse CometD message.");
             return;
         }
         ChatResponse chatResponse = null;
-        try {
-            chatResponse = chatCometResponse.getData().getMessage();
-            try {
-                Integer transcriptPosition = Integer.valueOf(chatResponse.getTranscriptPosition());
-                if (transcriptPosition < cometClient.getTranscriptPosition()) {
-                    Log.d("GenesysChatController", "Comet client is ahead of server!");
-                }
-                cometClient.setTranscriptPosition(transcriptPosition);
-            } catch(NumberFormatException e) {
-                Log.w("GenesysChatController", "Failed to parse transcript position", e);
-            }
-            List<TranscriptEntry> transcriptEntryList = chatResponse.getTranscriptToShow();
-            if(transcriptEntryList != null) {
-                for (TranscriptEntry entry : transcriptEntryList) {
-                    Log.d("GenesysChatController", "Posting " + entry);
-                    bus.post(new ChatTranscriptEvent(entry));
-                }
-            } else {
-                Log.d("GenesysChatController", "No transcript to show!");
-            }
-        } catch (NullPointerException e) {
-            Log.e("GenesysChatController", "Failed to process transcript entries: " + e);
+        chatResponse = chatCometResponse.getData().getMessage();
+        Integer transcriptPosition = chatResponse.getTranscriptPosition();
+        if (transcriptPosition < cometClient.getTranscriptPosition()) {
+            Log.d("GenesysChatController", "Comet client is ahead of server!");
+        } else {
+            cometClient.setTranscriptPosition(transcriptPosition);
         }
-        if(chatResponse != null) {
-            if(chatResponse.getChatIxnState() == ChatState.DISCONNECTED) {
-                bus.post(new ChatResponseEvent(chatResponse, ChatRequestType.DISCONNECT));
+        List<TranscriptEntry> transcriptEntryList = chatResponse.getTranscriptToShow();
+        if(transcriptEntryList != null) {
+            for (TranscriptEntry entry : transcriptEntryList) {
+                bus.post(new ChatTranscriptEvent(entry));
             }
+        } else {
+            Timber.d("No transcript to show!");
+        }
+        if(chatResponse.getChatIxnState() == ChatState.DISCONNECTED) {
+            bus.post(new ChatResponseEvent(chatResponse, ChatRequestType.DISCONNECT));
         }
     }
 

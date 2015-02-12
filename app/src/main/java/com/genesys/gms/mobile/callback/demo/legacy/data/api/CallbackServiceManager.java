@@ -36,9 +36,10 @@ import java.util.Map;
  */
 @Singleton
 public class CallbackServiceManager {
-    public static final String GMS_USER = "gms_user";
-    public static final String CHECK_QUEUE_POSITION_SERVICE_NAME = "check-queue-position";
-    public static final MediaType FORM_ENCODED = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
+    // TODO: Convert events to use Bundles internally
+    // TODO: Create a BundleTypeAdapter or use one from funf-open-sensing-framework
+    private static final String GMS_USER = "gms_user";
+    private static final String CHECK_QUEUE_POSITION_SERVICE_NAME = "check-queue-position";
 
     private final CallbackService callbackService;
     private final GmsEndpoint gmsEndpoint;
@@ -238,7 +239,6 @@ public class CallbackServiceManager {
         if(strGmsUser != null && !strGmsUser.isEmpty()) {
             builder.addHeader(GMS_USER, strGmsUser);
         }
-        // builder.post(RequestBody.create(FORM_ENCODED, ""));
         Request request = builder.build();
 
         httpClient.newCall(request).enqueue(new com.squareup.okhttp.Callback() {

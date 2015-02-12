@@ -5,7 +5,6 @@ import java.util.*;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.support.v4.preference.PreferenceFragment;
-import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.ForActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
@@ -21,8 +20,6 @@ import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 import org.joda.time.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -33,12 +30,11 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.util.Pair;
 import android.widget.Toast;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 
 public class GenesysSampleController {
-
-	private final Logger log = LoggerFactory.getLogger(Globals.GENESYS_LOG_TAG);
     private final Context context;
     private final SharedPreferences sharedPreferences;
     private final EventBus bus;
@@ -115,7 +111,6 @@ public class GenesysSampleController {
             params.put("_wait_for_user_confirm", "true");
             params.put("_media_type", "chat");
         } else { // CUSTOM
-            log.debug("Starting custom Callback service.");
         }
 
         bus.post(new CallbackStartEvent(
@@ -161,13 +156,14 @@ public class GenesysSampleController {
                         public void onClick(DialogInterface dialog, int which) {
                             String label = groupContents.get(which).getLabel();
                             String url = groupContents.get(which).getUserActionUrl();
-                            Log.i("GenesysController", "User selected option [" + label + "]: " + url);
+                            Timber.i("User selected option [%s]: %s", label, url);
                             bus.post(new CallbackDialogEvent(url));
                         }
                     });
                 builder.create().show();
                 break;
             case CHAT:
+                // Clean old persisted Chat information.
                 sharedPreferences.edit()
                     .remove("CHAT_chatFinished")
                     .remove("CHAT_cometUrl")
@@ -237,12 +233,12 @@ public class GenesysSampleController {
         GenesysSampleActivity activity = (GenesysSampleActivity)context;
         PreferenceFragment callbackFragment = (PreferenceFragment)activity.getFragment(0);
         if (callbackFragment == null) {
-            Log.w("GenesysSampleActivity", "Failed to update time slots. Callback fragment is null");
+            Timber.w("Unable to update time slots: Callback fragment is null.");
             return;
         }
         ListPreference selectedTime = (ListPreference)callbackFragment.findPreference("selected_time");
         if (selectedTime == null) {
-            Log.w("GenesysSampleActivity", "Failed to update time slots. selected_time pref is null");
+            Timber.w("Unable to update time slots: selected_time Preference is null.");
             return;
         }
         List<Pair<String,String>> newEntries = new ArrayList<Pair<String,String>>();
@@ -293,7 +289,6 @@ public class GenesysSampleController {
             firstIndex = Math.max(closestTimeIndex - AVAILABLE_OPTIONS / 2, 0);
             lastIndex = Math.min(closestTimeIndex + AVAILABLE_OPTIONS / 2, newEntries.size() - 1);
             availableEntries = lastIndex - firstIndex + 1;
-            Log.d("updateTimeSlots()", "closestTimeIndex: " + closestTimeIndex + " firstIndex: " + firstIndex + " lastIndex: " + lastIndex);
 
             CharSequence[] entriesList = new CharSequence[availableEntries];
             CharSequence[] entryValuesList = new CharSequence[availableEntries];
@@ -322,7 +317,6 @@ public class GenesysSampleController {
 		while(lo <= hi) {
 			mid = lo + (hi - lo) / 2;
 			result = desiredTime.compareTo(availableTimes.get(mid).second);
-			Log.d("findClosestTime()", "lo: " + lo + " mid: " + mid + " hi: " + hi + " result: " + result + " desiredTime: " + desiredTime + " availableTime: " + availableTimes.get(mid).second);
 			if (result < 0) {
 				// less than mid
 				hi = mid - 1;

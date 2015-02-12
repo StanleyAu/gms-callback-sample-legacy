@@ -13,6 +13,7 @@ import hugo.weaving.DebugLog;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
+import timber.log.Timber;
 
 import java.util.Arrays;
 
@@ -114,7 +115,7 @@ public class DateTimePreference extends DialogPreference
             displayedDates[i] = time.toString(TimeHelper.DAY_OF_MONTH_FORMAT);
         }
 
-        Log.d(TAG, "displayedDates: " + Arrays.toString(displayedDates));
+        Timber.d("displayedDates: %s", Arrays.toString(displayedDates));
         datePicker.setDisplayedValues(displayedDates);
     }
 
@@ -158,19 +159,23 @@ public class DateTimePreference extends DialogPreference
         }
         catch(NullPointerException ex)
         {
-            Log.w(TAG, "currentDT is null");
+            Timber.w("currentDT is null.");
             time = today;
         }
         catch(IllegalArgumentException ex)
         {
             Log.w(TAG, "currentDT is invalid: " + ex.getMessage());
+            Timber.w(ex, "currentDT is invalid.");
             time = today;
         }
 
         int daysDiff = 0;
 
-        Log.d(TAG, "currentDT: " + TimeHelper.serializeUTCTime(time) +
-            " today: " + TimeHelper.serializeUTCTime(DateTime.now()));
+        Timber.d(
+            "currentDT: %s, today: %s",
+            TimeHelper.serializeUTCTime(time),
+            TimeHelper.serializeUTCTime(DateTime.now())
+        );
         // Only if time before now is not allowed
         if(time.isBefore(today)) {
             time = today;
@@ -178,7 +183,7 @@ public class DateTimePreference extends DialogPreference
         else
         {
             daysDiff = getDayDifference(today, time);
-            Log.d(TAG, "Day difference between restored and today: " + daysDiff);
+            Timber.d("Day difference between restored and today: %d", daysDiff);
             // Previously selected time exceeds allowed range
             if(daysDiff>(maxDays - 1))
             {
@@ -213,7 +218,7 @@ public class DateTimePreference extends DialogPreference
             time = DateTime.now();
         }
         result = TimeHelper.serializeUTCTime(time);
-        Log.d(TAG, "formatDate: " + result);
+        Timber.d("formatDate: %s", result);
         return result;
     }
 
@@ -226,21 +231,19 @@ public class DateTimePreference extends DialogPreference
             readPickers();
             if(callChangeListener(currentDT))
             {
-                Log.d("DateTimePreference", "callChangeListener is true");
+                Timber.d("callChangeListener returned true.");
                 persistString(currentDT);
                 setSummary(TimeHelper.toFriendlyString(currentDT));
             }
         }
     }
 
-    @Override
+    @Override @DebugLog
     protected void onSetInitialValue(boolean restorePersistedValue, Object defaultValue)
     {
-        Log.d(TAG, "onSetInitialValue()" + (String)defaultValue);
         if(restorePersistedValue)
         {
             currentDT = this.getPersistedString(DEFAULT_VALUE);
-            //setSummary(currentDT);
         }
         else
         {

@@ -72,7 +72,7 @@ public class ApiModule {
                     @Override
                     public void log(String msg) {
                         Timber.tag("Retrofit");
-                        Timber.d("msg");
+                        Timber.d(msg);
                     }
                 });
         }

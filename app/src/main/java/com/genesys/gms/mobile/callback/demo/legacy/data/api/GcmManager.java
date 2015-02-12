@@ -14,7 +14,7 @@ import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysChatActivity;
-import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
+import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysSampleActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -23,6 +23,9 @@ import com.google.gson.JsonSyntaxException;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.NoSubscriberEvent;
 import hugo.weaving.DebugLog;
+import org.json.JSONException;
+import org.json.JSONObject;
+import timber.log.Timber;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -61,7 +64,6 @@ public class GcmManager {
 
     public void onEventAsync(GcmRegisterEvent event) {
         if( !checkPlayServices() ) {
-            // Google Play Services not available
             bus.post(new GcmErrorEvent(null));
             return;
         }
@@ -90,7 +92,6 @@ public class GcmManager {
     }
 
     public void onEventAsync(GcmUnregisterEvent event) {
-        //Timber.i("Handling GCM unregister request: " + event.toString());
         if( !checkPlayServices() ) {
             bus.post(new GcmErrorEvent(null));
             return;
@@ -113,18 +114,22 @@ public class GcmManager {
         }
     }
 
-    @DebugLog
     public void onEvent(GcmRegisterDoneEvent event) {
         storeRegistrationId(event.registrationId, event.senderId);
     }
 
-    @DebugLog
     public void onEvent(GcmUnregisterDoneEvent event) {
         storeRegistrationId(null, null);
         if(!event.isPendingWork()) {
             return;
         }
         bus.post(new GcmRegisterEvent(event.strNewSenderId));
+    }
+
+    private static enum NotifyTarget {
+        UNKNOWN,
+        CALLBACK,
+        CHAT
     }
 
     /**
@@ -135,26 +140,53 @@ public class GcmManager {
      *
      * @param event Returned event due to no subscribers
      */
-    @DebugLog
     public void onEvent(NoSubscriberEvent event) {
+        NotifyTarget target = NotifyTarget.UNKNOWN;
+
         if(!(event.originalEvent instanceof GcmReceiveEvent)) {
-            Log.d("GcmManager", event.originalEvent.toString());
+            Timber.d("No subscriber for event: %s", event.originalEvent);
             return;
         }
+
         GcmReceiveEvent gcmReceiveEvent = (GcmReceiveEvent)event.originalEvent;
-        String message = gcmReceiveEvent.extras.getString("message");
+        String message = null;
         GcmSyncMessage gcmSyncMessage = null;
         try {
-            gcmSyncMessage = gson.fromJson(message, GcmSyncMessage.class);
+            gcmSyncMessage = gson.fromJson(
+                gcmReceiveEvent.extras.getString("message"),
+                GcmSyncMessage.class
+            );
+            message = "Callback needs your attention!";
+            target = NotifyTarget.CALLBACK;
         } catch(JsonSyntaxException e) {
-            Log.e("GcmManager", "Unable to parse GCM message", e);
+            Timber.e(e, "Unable to parse as Send-to-Sync message.");
+        }
+        if(gcmSyncMessage == null) {
+            try {
+                JSONObject json = new JSONObject(message);
+                if(json.has("message")) {
+                    message = json.getString("message");
+                    target = NotifyTarget.CHAT;
+                }
+            } catch(JSONException e) {
+                Timber.e(e, "Unable to parse as Chat notification.");
+            }
         }
 
-        /*
-        Intent resultIntent = new Intent(context, GenesysChatActivity.class);
-        resultIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        context.startActivity(resultIntent);
-        */
+        Class<?> intentTarget = null;
+        switch(target) {
+            case UNKNOWN:
+                // Failed to process GCM event
+                return;
+            case CALLBACK:
+                Timber.d("Notifying user for Callback.");
+                intentTarget = GenesysSampleActivity.class;
+                break;
+            case CHAT:
+                Timber.d("Notifying user for Chat.");
+                intentTarget = GenesysChatActivity.class;
+                break;
+        }
 
         NotificationCompat.Builder builder =
             getNotificationBuilder(
@@ -165,16 +197,10 @@ public class GcmManager {
 
         builder.setOngoing(true);
         // int notificationId = mNotifyId.getAndIncrement();
-        Intent resultIntent = new Intent(context, GenesysChatActivity.class);
+        Intent resultIntent = new Intent(context, intentTarget);
         //resultIntent.putExtra(GCM_NOTIFICATION_ID, notificationId);
         //resultIntent.putExtra(GCM_NOTIFICATION_ID, 0);
         resultIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        //TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        //stackBuilder.addParentStack(GenesysChatActivity.class);
-        //stackBuilder.addNextIntent(resultIntent);
-        //PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(
-        //    0, PendingIntent.FLAG_UPDATE_CURRENT
-        //);
         PendingIntent resultPendingIntent = PendingIntent.getActivity(context, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(resultPendingIntent);
         //getNotificationManager().notify(notificationId, builder.build());
@@ -201,10 +227,10 @@ public class GcmManager {
 
     private boolean checkPlayServices() {
         int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(context);
-        if(resultCode!= ConnectionResult.SUCCESS){
-            // Timber.w("Google Play Services are not available.");
+        if(resultCode != ConnectionResult.SUCCESS){
+            Timber.w("Google Play Services are not available.");
             if(GooglePlayServicesUtil.isUserRecoverableError(resultCode)) {
-                // GooglePlayServicesUtil.getErrorDialog(resultCode, getActivity(), PLAY_SERVICES_RESOLUTION_REQUEST).show();
+                //GooglePlayServicesUtil.getErrorDialog(resultCode, getActivity(), PLAY_SERVICES_RESOLUTION_REQUEST).show();
             } else {
                 // TODO: Publish event to indicate GooglePlayServices is not available
             }
@@ -217,14 +243,14 @@ public class GcmManager {
         String registrationId = sharedPreferences.getString(PROPERTY_REG_ID, "");
         if(registrationId.isEmpty()) {
             // No registration found
-            //Timber.d("No saved Registration ID found.");
+            Timber.d("No saved Registration ID found.");
             return "";
         }
         int registeredVersion = sharedPreferences.getInt(PROPERTY_APP_VERSION, Integer.MIN_VALUE);
         int currentVersion = getAppVersion();
         if(registeredVersion!=currentVersion) {
             // Version changed
-            //Timber.d("Version ID has changed and Registration ID is no longer valid.");
+            Timber.d("Version ID has changed and Registration ID is no longer valid.");
             return "";
         }
         return registrationId;
@@ -261,7 +287,6 @@ public class GcmManager {
             editor.putString(PROPERTY_SENDER_ID, senderId);
             editor.putInt(PROPERTY_APP_VERSION, appVersion);
         }
-        // apply() tells the editor to perform the save asynchronously.
         editor.apply();
     }
 }
