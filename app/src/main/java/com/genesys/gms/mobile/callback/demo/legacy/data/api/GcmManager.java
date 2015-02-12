@@ -8,9 +8,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmChatMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.ui.GenesysChatActivity;
@@ -30,28 +30,26 @@ import timber.log.Timber;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by stau on 30/11/2014.
  */
 @Singleton
 public class GcmManager {
+    public static final String PROPERTY_REG_ID = "registration_id";
+    private static final String PROPERTY_SENDER_ID = "gcm_sender_id";
+    private static final String PROPERTY_APP_VERSION = "app_version";
+    private static final int NID_CALLBACK = 1;
+    private static final int NID_CHAT = 2;
+    private static final int MAX_NOTED_TRANSCRIPTS = 3;
+
     private final GoogleCloudMessaging googleCloudMessaging;
     private final Gson gson;
     private final EventBus bus;
     private final SharedPreferences sharedPreferences;
     private final Context context;
-    private AtomicInteger idGen = new AtomicInteger();
-
-    public final static String PROPERTY_SENDER_ID = "gcm_sender_id";
-    public final static String PROPERTY_REG_ID = "registration_id";
-    private static final String PROPERTY_APP_VERSION = "app_version";
-    private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
     NotificationManagerCompat mNotificationManager;
-    // private static final long[] VIBRATE_PATTERN = {350L, 200L, 350L};
-    public static final String GCM_NOTIFICATION_ID = "gcm_notification_id";
 
     @Inject @DebugLog
     public GcmManager(GoogleCloudMessaging googleCloudMessaging, Gson gson, SharedPreferences sharedPreferences, @ForApplication Context context) {
@@ -126,12 +124,6 @@ public class GcmManager {
         bus.post(new GcmRegisterEvent(event.strNewSenderId));
     }
 
-    private static enum NotifyTarget {
-        UNKNOWN,
-        CALLBACK,
-        CHAT
-    }
-
     /**
      * NoSubscriberEvent subscription allows us to observe events for which there are
      * no subscribers. This is particularly handy for seeing if there is an
@@ -141,70 +133,97 @@ public class GcmManager {
      * @param event Returned event due to no subscribers
      */
     public void onEvent(NoSubscriberEvent event) {
-        NotifyTarget target = NotifyTarget.UNKNOWN;
-
         if(!(event.originalEvent instanceof GcmReceiveEvent)) {
             Timber.d("No subscriber for event: %s", event.originalEvent);
             return;
         }
 
         GcmReceiveEvent gcmReceiveEvent = (GcmReceiveEvent)event.originalEvent;
-        String message = null;
-        GcmSyncMessage gcmSyncMessage = null;
+        String message = gcmReceiveEvent.extras.getString("message");
         try {
-            gcmSyncMessage = gson.fromJson(
-                gcmReceiveEvent.extras.getString("message"),
-                GcmSyncMessage.class
-            );
-            message = "Callback needs your attention!";
-            target = NotifyTarget.CALLBACK;
-        } catch(JsonSyntaxException e) {
-            Timber.e(e, "Unable to parse as Send-to-Sync message.");
-        }
+            GcmSyncMessage gcmSyncMessage = gson.fromJson(message, GcmSyncMessage.class);
+            if(!notifyForCallback(gcmSyncMessage)) {
+            }
+        } catch(JsonSyntaxException e) {;}
+        try {
+            GcmChatMessage gcmChatMessage = gson.fromJson(message, GcmChatMessage.class);
+            if(!notifyForChat(gcmChatMessage)) {
+            }
+        } catch(JsonSyntaxException e) {;}
+
+        Timber.w("NoSubscriberEvent dropped: %s", event.originalEvent);
+    }
+
+    @DebugLog
+    private boolean notifyForCallback(GcmSyncMessage gcmSyncMessage) {
         if(gcmSyncMessage == null || gcmSyncMessage.getAction() == null) {
-            try {
-                JSONObject json = new JSONObject(message);
-                if(json.has("message")) {
-                    message = json.getString("message");
-                    target = NotifyTarget.CHAT;
+            return false;
+        }
+
+        Intent intent = new Intent(context, GenesysSampleActivity.class)
+            .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        // TODO: Use String resources
+        getNotificationManager().notify(
+            NID_CALLBACK,
+            new NotificationCompat.Builder(context)
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentTitle("Genesys Callback")
+                .setContentText("Your attention is needed!")
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .setOngoing(true)
+                .setContentIntent(pendingIntent)
+                .build()
+        );
+
+        return true;
+    }
+
+    @DebugLog
+    private boolean notifyForChat(GcmChatMessage gcmChatMessage) {
+        if(gcmChatMessage == null || gcmChatMessage.getMessage() == null) {
+            return false;
+        }
+
+        NotificationCompat.InboxStyle noteStyle = null;
+        int numTranscripts = gcmChatMessage.getLastTranscript().size();
+        int addedTranscripts = 0;
+        String firstLine = "Touch to view.";
+        if(numTranscripts > 0) {
+            noteStyle = new NotificationCompat.InboxStyle()
+                // .setBigContentTitle() DEFAULT TO ContentTitle
+                .setSummaryText(String.format("%d new messages", numTranscripts));
+            for (GcmChatMessage.TranscriptBrief transcriptBrief : gcmChatMessage.getLastTranscript()) {
+                noteStyle.addLine(transcriptBrief.getMessageText());
+                if(addedTranscripts == 0) {
+                    firstLine = transcriptBrief.getMessageText();
                 }
-            } catch(JSONException e) {
-                Timber.e(e, "Unable to parse as Chat notification.");
+                if(++addedTranscripts >= MAX_NOTED_TRANSCRIPTS) {
+                    break;
+                }
             }
         }
 
-        Class<?> intentTarget = null;
-        switch(target) {
-            case UNKNOWN:
-                // Failed to process GCM event
-                return;
-            case CALLBACK:
-                Timber.d("Notifying user for Callback.");
-                intentTarget = GenesysSampleActivity.class;
-                break;
-            case CHAT:
-                Timber.d("Notifying user for Chat.");
-                intentTarget = GenesysChatActivity.class;
-                break;
-        }
+        Intent intent = new Intent(context, GenesysChatActivity.class)
+            .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        // TODO: Use String resources
+        getNotificationManager().notify(
+            NID_CHAT,
+            new NotificationCompat.Builder(context)
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentTitle(gcmChatMessage.getMessage())
+                .setContentText(firstLine)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .setOngoing(true)
+                .setContentIntent(pendingIntent)
+                .setStyle(noteStyle)
+                .build()
+        );
 
-        NotificationCompat.Builder builder =
-            getNotificationBuilder(
-                R.drawable.ic_launcher,
-                context.getResources().getString(R.string.title_activity_genesys_sample),
-                message
-            );
-
-        builder.setOngoing(true);
-        // int notificationId = mNotifyId.getAndIncrement();
-        Intent resultIntent = new Intent(context, intentTarget);
-        //resultIntent.putExtra(GCM_NOTIFICATION_ID, notificationId);
-        //resultIntent.putExtra(GCM_NOTIFICATION_ID, 0);
-        resultIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(context, 0, resultIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-        builder.setContentIntent(resultPendingIntent);
-        //getNotificationManager().notify(notificationId, builder.build());
-        getNotificationManager().notify(0, builder.build());
+        return true;
     }
 
     protected NotificationManagerCompat getNotificationManager() {
