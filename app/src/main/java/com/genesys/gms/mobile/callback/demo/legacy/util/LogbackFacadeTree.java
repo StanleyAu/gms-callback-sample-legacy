@@ -82,13 +82,13 @@ public class LogbackFacadeTree implements Timber.TaggedTree {
         }
     }
 
-    @Override
-    public void tag(String tag) {
-        try {
+    @Override public void tag(String tag) {
+        try{
             ((Timber.TaggedTree)rootTree).tag(tag);
         } catch(Exception e) {
             ;
         }
+        NEXT_TAG.set(tag);
     }
 
     @Override

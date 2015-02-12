@@ -31,7 +31,6 @@ public class App extends Application {
         applicationGraph.inject(this);
         bus = EventBus.getDefault();
         registerManagers();
-        Globals.setupLogging(this);
 
         if (BuildConfig.DEBUG) {
             Timber.plant(new LogbackFacadeTree(new Timber.DebugTree(), this));
