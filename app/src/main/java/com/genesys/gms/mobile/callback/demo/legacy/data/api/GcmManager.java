@@ -161,7 +161,7 @@ public class GcmManager {
         } catch(JsonSyntaxException e) {
             Timber.e(e, "Unable to parse as Send-to-Sync message.");
         }
-        if(gcmSyncMessage == null) {
+        if(gcmSyncMessage == null || gcmSyncMessage.getAction() == null) {
             try {
                 JSONObject json = new JSONObject(message);
                 if(json.has("message")) {
