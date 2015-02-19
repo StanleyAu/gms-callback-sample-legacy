@@ -21,6 +21,7 @@
 
 -dontwarn retrofit.**
 -dontwarn org.joda.time.**
+-dontwarn org.slf4j.**
 -dontwarn org.eclipse.jetty.**
 -dontwarn org.cometd.**
 -dontwarn okio.**
