@@ -49,9 +49,10 @@ public class GcmManager {
     private final SharedPreferences sharedPreferences;
     private final Context context;
 
-    NotificationManagerCompat mNotificationManager;
+    private NotificationManagerCompat mNotificationManager;
+    private NotificationCompat.InboxStyle mInboxStyle;
 
-    @Inject @DebugLog
+    @Inject
     public GcmManager(GoogleCloudMessaging googleCloudMessaging, Gson gson, SharedPreferences sharedPreferences, @ForApplication Context context) {
         this.googleCloudMessaging = googleCloudMessaging;
         this.gson = gson;
@@ -187,21 +188,27 @@ public class GcmManager {
         }
 
         NotificationCompat.InboxStyle noteStyle = null;
-        int numTranscripts = gcmChatMessage.getLastTranscript().size();
-        int addedTranscripts = 0;
-        String firstLine = "Touch to view.";
+        int numTranscripts = sharedPreferences.getInt("newMessages", 0);
+        int addedTranscripts = numTranscripts;
+        if(numTranscripts == 0) {
+            mInboxStyle = null;
+        }
+        numTranscripts += gcmChatMessage.getLastTranscript().size();
+        sharedPreferences.edit().putInt("newMessages", numTranscripts).apply();
+        String firstLine = null;
+
         if(numTranscripts > 0) {
-            noteStyle = new NotificationCompat.InboxStyle()
+            noteStyle = getInboxStyle()
                 // .setBigContentTitle() DEFAULT TO ContentTitle
                 .setSummaryText(String.format("%d new messages", numTranscripts));
             for (GcmChatMessage.TranscriptBrief transcriptBrief : gcmChatMessage.getLastTranscript()) {
-                noteStyle.addLine(transcriptBrief.getMessageText());
-                if(addedTranscripts == 0) {
+                if(firstLine == null) {
                     firstLine = transcriptBrief.getMessageText();
                 }
-                if(++addedTranscripts >= MAX_NOTED_TRANSCRIPTS) {
+                if(addedTranscripts++ >= MAX_NOTED_TRANSCRIPTS) {
                     break;
                 }
+                noteStyle.addLine(transcriptBrief.getMessageText());
             }
         }
 
@@ -214,7 +221,7 @@ public class GcmManager {
             new NotificationCompat.Builder(context)
                 .setSmallIcon(R.drawable.ic_launcher)
                 .setContentTitle(gcmChatMessage.getMessage())
-                .setContentText(firstLine)
+                .setContentText(firstLine == null ? "Touch to view." : firstLine)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setAutoCancel(true)
                 .setOngoing(true)
@@ -233,15 +240,13 @@ public class GcmManager {
         return mNotificationManager;
     }
 
-    protected NotificationCompat.Builder getNotificationBuilder(int icon, CharSequence title, CharSequence text) {
+    protected NotificationCompat.InboxStyle getInboxStyle() {
         // TODO: Is it worthwhile to cache this at all?
         // setDefaults will default the notification vibration/sound/lights settings
-        return new NotificationCompat.Builder(context)
-            .setSmallIcon(icon)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setAutoCancel(true);
+        if(mInboxStyle == null) {
+            mInboxStyle = new NotificationCompat.InboxStyle();
+        }
+        return mInboxStyle;
     }
 
     private boolean checkPlayServices() {

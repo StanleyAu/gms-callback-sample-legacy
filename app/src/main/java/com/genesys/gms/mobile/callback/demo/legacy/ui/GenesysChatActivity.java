@@ -106,7 +106,7 @@ public class GenesysChatActivity extends BaseActivity {
             Timber.d("Attempt to restore Chat state from persistence.");
             inState = new Bundle();
             inState.putBoolean("chatFinished", sharedPreferences.getBoolean("CHAT_chatFinished", false));
-            inState.putString("chatFinished", sharedPreferences.getString("CHAT_cometUrl", null));
+            inState.putString("cometUrl", sharedPreferences.getString("CHAT_cometUrl", null));
             inState.putString("sessionId", sharedPreferences.getString("CHAT_sessionId", null));
             inState.putString("subject", sharedPreferences.getString("CHAT_subject", null));
         }
@@ -159,6 +159,13 @@ public class GenesysChatActivity extends BaseActivity {
 
     @Override
     protected void onPause() {
+        if(userTyping) {
+            controller.stopTyping();
+            if(scheduledStopTypingMessage != null && !scheduledStopTypingMessage.isDone()) {
+                scheduledStopTypingMessage.cancel(false);
+                scheduledStopTypingMessage = null;
+            }
+        }
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
@@ -341,6 +348,10 @@ public class GenesysChatActivity extends BaseActivity {
 
     public void onEventMainThread(ChatTranscriptEvent event) {
         TranscriptEntry transcriptEntry = event.transcriptEntry;
+        if(transcriptEntry.getChatEvent() == null) {
+            Timber.e("Unknown ChatEvent encountered, see raw response for details.");
+            return;
+        }
         switch(transcriptEntry.getChatEvent()) {
             case PARTY_JOINED:
             case PARTY_LEFT:

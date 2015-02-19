@@ -62,12 +62,13 @@ public class CometClient {
                 }
             };
             bayeuxClient = new BayeuxClient(serverUrl, transport);
-            //addListeners();
+            addListeners();
             addExtensions();
         }
         if(!bayeuxClient.isHandshook()) {
             bayeuxClient.handshake();
 
+            /*
             boolean handshakeSuccess = bayeuxClient.waitFor(15000, BayeuxClient.State.CONNECTED);
             if (!handshakeSuccess)
                 throw new RuntimeException("CometD handshake did not succeed");
@@ -81,6 +82,7 @@ public class CometClient {
                     }
                 }
             });
+            */
         }
     }
 
@@ -94,6 +96,8 @@ public class CometClient {
                         if (message.isSuccessful()) {
                             Timber.d("Handshake successful, adding subs.");
                             addSubscriptions();
+                        } else {
+                            Timber.e("Handshake did not succeed.");
                         }
                     }
                 });

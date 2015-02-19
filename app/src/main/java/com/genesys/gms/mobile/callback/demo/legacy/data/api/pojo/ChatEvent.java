@@ -11,5 +11,6 @@ public enum ChatEvent {
     @SerializedName("Notice.Left") PARTY_LEFT,
     @SerializedName("Notice.TypingStarted") TYPING_STARTED,
     @SerializedName("Notice.TypingStopped") TYPING_STOPPED,
-    @SerializedName("Notice.PushUrl") PUSH_URL
+    @SerializedName("Notice.PushUrl") PUSH_URL,
+    @SerializedName("Notice.Custom") CUSTOM
 }

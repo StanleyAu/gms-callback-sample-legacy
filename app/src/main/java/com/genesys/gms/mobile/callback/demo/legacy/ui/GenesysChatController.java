@@ -86,6 +86,7 @@ public class GenesysChatController implements CometHandler {
 
     // Must be Async
     public void stopComet() {
+        sharedPreferences.edit().remove("newMessages").apply();
         cometClient.disconnect();
     }
 
