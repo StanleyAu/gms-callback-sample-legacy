@@ -39,6 +39,7 @@ public class CallbackServiceManager {
     // TODO: Convert events to use Bundles internally
     // TODO: Create a BundleTypeAdapter or use one from funf-open-sensing-framework
     private static final String GMS_USER = "gms_user";
+    private static final String SERVICE_PATH = "service";
     private static final String CHECK_QUEUE_POSITION_SERVICE_NAME = "check-queue-position";
 
     private final CallbackService callbackService;
@@ -226,11 +227,17 @@ public class CallbackServiceManager {
     }
 
     public void onEvent(CallbackDialogEvent event) {
-        String strBaseUri = gmsEndpoint.getUrl();
-        String strSyncUri = new Uri.Builder()
-            .encodedPath(strBaseUri)
-            .appendEncodedPath(event.url)
-            .toString();
+        String strSyncUri;
+        if(event.isFragment) {
+            String strBaseUri = gmsEndpoint.getUrl();
+            strSyncUri = new Uri.Builder()
+                .encodedPath(strBaseUri)
+                .appendPath(SERVICE_PATH)
+                .appendEncodedPath(event.url)
+                .toString();
+        } else {
+            strSyncUri = event.url;
+        }
 
         String strGmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
         // TODO: Handle RuntimeExceptions resulting from Malformed URI

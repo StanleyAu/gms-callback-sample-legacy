@@ -157,7 +157,7 @@ public class GenesysSampleController {
                             String label = groupContents.get(which).getLabel();
                             String url = groupContents.get(which).getUserActionUrl();
                             Timber.i("User selected option [%s]: %s", label, url);
-                            bus.post(new CallbackDialogEvent(url));
+                            bus.post(new CallbackDialogEvent(url, false));
                         }
                     });
                 builder.create().show();
@@ -190,7 +190,7 @@ public class GenesysSampleController {
     @DebugLog
     public void handleGcmMessage(GcmSyncMessage gcmSyncMessage) {
         // Grab message and do post
-        bus.post(new CallbackDialogEvent(gcmSyncMessage.getSyncUri()));
+        bus.post(new CallbackDialogEvent(gcmSyncMessage.getSyncUri(), true));
     }
 
     public void checkQueuePosition() {
