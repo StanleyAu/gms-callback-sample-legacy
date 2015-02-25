@@ -153,7 +153,7 @@ public class CometClient {
                     Timber.d("Inserting transcriptPosition ext=%d", transcriptPosition);
                     Map<String,Object> ext = message.getExt(true);
                     // TODO: Use hook to retrieve value
-                    ext.put("transcriptPosition", transcriptPosition);
+                    ext.put("transcriptPosition", Integer.toString(transcriptPosition));
                 }
                 return true;
             }

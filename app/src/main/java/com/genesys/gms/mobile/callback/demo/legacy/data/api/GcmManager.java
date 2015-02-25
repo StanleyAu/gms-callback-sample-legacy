@@ -141,6 +141,7 @@ public class GcmManager {
 
         GcmReceiveEvent gcmReceiveEvent = (GcmReceiveEvent)event.originalEvent;
         String message = gcmReceiveEvent.extras.getString("message");
+        Timber.d("Unparsed GCM message: %s", message);
         try {
             GcmSyncMessage gcmSyncMessage = gson.fromJson(message, GcmSyncMessage.class);
             if(!notifyForCallback(gcmSyncMessage)) {
@@ -193,23 +194,26 @@ public class GcmManager {
         if(numTranscripts == 0) {
             mInboxStyle = null;
         }
-        numTranscripts += gcmChatMessage.getLastTranscript().size();
-        sharedPreferences.edit().putInt("newMessages", numTranscripts).apply();
-        String firstLine = null;
 
-        if(numTranscripts > 0) {
-            noteStyle = getInboxStyle()
-                // .setBigContentTitle() DEFAULT TO ContentTitle
-                .setSummaryText(String.format("%d new messages", numTranscripts));
-            for (GcmChatMessage.TranscriptBrief transcriptBrief : gcmChatMessage.getLastTranscript()) {
-                if(firstLine == null) {
-                    firstLine = transcriptBrief.getMessageText();
+        String firstLine = null;
+        if(gcmChatMessage.getLastTranscript() != null) {
+            numTranscripts += gcmChatMessage.getLastTranscript().size();
+
+            if (numTranscripts > 0) {
+                noteStyle = getInboxStyle()
+                    // .setBigContentTitle() DEFAULT TO ContentTitle
+                    .setSummaryText(String.format("%d new messages", numTranscripts));
+                for (GcmChatMessage.TranscriptBrief transcriptBrief : gcmChatMessage.getLastTranscript()) {
+                    if (firstLine == null) {
+                        firstLine = transcriptBrief.getMessageText();
+                    }
+                    if (addedTranscripts++ >= MAX_NOTED_TRANSCRIPTS) {
+                        break;
+                    }
+                    noteStyle.addLine(transcriptBrief.getMessageText());
                 }
-                if(addedTranscripts++ >= MAX_NOTED_TRANSCRIPTS) {
-                    break;
-                }
-                noteStyle.addLine(transcriptBrief.getMessageText());
             }
+            sharedPreferences.edit().putInt("newMessages", numTranscripts).apply();
         }
 
         Intent intent = new Intent(context, GenesysChatActivity.class)

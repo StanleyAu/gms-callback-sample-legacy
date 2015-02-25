@@ -100,7 +100,7 @@ public class GenesysChatActivity extends BaseActivity {
             }
         }
 
-        setupUi();
+        setupUi(inState);
 
         if(inState == null) {
             Timber.d("Attempt to restore Chat state from persistence.");
@@ -114,8 +114,6 @@ public class GenesysChatActivity extends BaseActivity {
         cometUrl = inState.getString("cometUrl");
         sessionId = inState.getString("sessionId");
         subject = inState.getString("subject");
-        transcriptTextView.setText(inState.getCharSequence("transcript"));
-        sendEditText.setText(inState.getString("sendEditText"));
 
         controller.restoreState(inState);
 	}
@@ -177,10 +175,19 @@ public class GenesysChatActivity extends BaseActivity {
         super.onPause();
     }
 	
-	private void setupUi() {
+	private void setupUi(Bundle inState) {
 		setContentView(R.layout.chat_layout);
 		
 		sendEditText = (EditText)findViewById(R.id.sendText);
+        transcriptTextView = (TextView)findViewById(R.id.transcriptText);
+        sendButton = findViewById(R.id.sendButton);
+        infoTextView = (TextView)findViewById(R.id.informationalMessageTextView);
+
+        if(inState != null) {
+            transcriptTextView.setText(inState.getCharSequence("transcript"));
+            sendEditText.setText(inState.getString("sendEditText"));
+        }
+
 		sendEditText.setOnEditorActionListener(new OnEditorActionListener() {
 			@Override public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
 				if (actionId == EditorInfo.IME_ACTION_SEND) {
@@ -192,40 +199,33 @@ public class GenesysChatActivity extends BaseActivity {
 		});
 
         textWatcher = new TextWatcher() {
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+            @Override @DebugLog public void onTextChanged(CharSequence s, int start, int before, int count) {
                 updateSendButtonState();
             }
 
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                if(!userTyping) {
+            @Override @DebugLog public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                if(!userTyping && after > count) {
                     userTyping = true;
                     controller.startTyping();
-
-                    if(scheduledStopTypingMessage != null && !scheduledStopTypingMessage.isDone()) {
-                        scheduledStopTypingMessage.cancel(false);
-                        scheduledStopTypingMessage = null;
-                    }
+                } else if(scheduledStopTypingMessage != null && !scheduledStopTypingMessage.isDone()) {
+                    scheduledStopTypingMessage.cancel(false);
+                    scheduledStopTypingMessage = null;
                 }
             }
-            @Override public void afterTextChanged(Editable s) {
+            @Override @DebugLog public void afterTextChanged(Editable s) {
                 if(scheduledStopTypingMessage == null || scheduledStopTypingMessage.isDone()) {
                     scheduledStopTypingMessage = timer.schedule(updateUserTyping, 5, TimeUnit.SECONDS);
                 }
             }
         };
-		sendEditText.addTextChangedListener(textWatcher);
-		
-		transcriptTextView = (TextView)findViewById(R.id.transcriptText);
+        sendEditText.addTextChangedListener(textWatcher);
+
 		transcriptTextView.setMovementMethod(new ScrollingMovementMethod());
-		
-		sendButton = findViewById(R.id.sendButton);
 		sendButton.setOnClickListener(new OnClickListener() {
 			@Override public void onClick(View v) {
 				sendMessage();
 			}
 		});
-
-		infoTextView = (TextView)findViewById(R.id.informationalMessageTextView);
 		infoTextView.setTextColor(Color.GRAY);
 	}
 	
@@ -234,10 +234,24 @@ public class GenesysChatActivity extends BaseActivity {
 	}
 	
 	private void sendMessage() {
+        stopTyping();
 		final String text = sendEditText.getText().toString();
 		sendEditText.setText("");
         controller.sendText(text);
 	}
+
+    private void stopTyping() {
+        if(userTyping) {
+            if (scheduledStopTypingMessage != null) {
+                if (!scheduledStopTypingMessage.isDone()) {
+                    scheduledStopTypingMessage.cancel(false);
+                }
+                scheduledStopTypingMessage = null;
+            }
+            userTyping = false;
+            controller.stopTyping();
+        }
+    }
 	
 	private void appendTranscriptMessage(final String tag, final String message) {
 		SpannableString text = new SpannableString(tag + ": " + message + "\n");
@@ -267,8 +281,7 @@ public class GenesysChatActivity extends BaseActivity {
     private final Runnable updateUserTyping = new Runnable() {
         @Override
         public void run() {
-            userTyping = false;
-            controller.stopTyping();
+            stopTyping();
         }
     };
 	
