@@ -1,6 +1,7 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.capture;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +17,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.util.DisplayMetrics;
@@ -52,16 +54,19 @@ public class CaptureManager {
     private static final String DISPLAY_NAME = "Capture";
     private static final int NID_SCREEN_CAPTURE = 3;
     private static final DateTimeFormatter FILE_FORMAT =
-            DateTimeFormat.forPattern("'ScreenCap_'yyyy-MM-dd-HH-mm-ss'.png'");
+            DateTimeFormat.forPattern("'ScreenCap_'yyyy-MM-dd-HH-mm-ss");
     private ImageReader mImageReader;
     private ImageListener mImageListener;
     private ReentrantLock mImageLock = new ReentrantLock(true);
-    private HandlerThread mHandlerThread;
+    private HandlerThread mHandlerThread = null;
     private MediaProjection mProjection;
     private VirtualDisplay mDisplay;
     private int mWidth;
     private int mHeight;
+    private String mStorageId;
     private String mAccessCode;
+    private int mCounter;
+    private boolean mUploading = false;
     private final Context mContext;
     private final WindowManager mWindowManager;
     private final MediaProjectionManager mMediaProjectManager;
@@ -80,7 +85,6 @@ public class CaptureManager {
         mEndpoint = endpoint;
         mBus = EventBus.getDefault();
         mImageListener = new ImageListener();
-        mHandlerThread = null;
     }
 
     @SuppressWarnings("ResourceType")
@@ -99,11 +103,12 @@ public class CaptureManager {
             Timber.d("Permission for screen capture not granted.");
         } else {
             Timber.d("Starting screen capture.");
-           startCapture(event.resultCode, event.data);
+            startCapture(event.resultCode, event.data);
         }
     }
 
     public void onEventAsync(StopCaptureEvent event) {
+        mNotificationManager.cancel(NID_SCREEN_CAPTURE);
         if (mHandlerThread == null) {
             Timber.d("Screen capture already stopped!");
             return;
@@ -121,6 +126,19 @@ public class CaptureManager {
     private void startCapture(int resultCode, Intent data) {
         mImageLock.lock();
         try {
+            try {
+                String result = createShareRequest();
+                Timber.d(result);
+                JSONObject jsonObject = new JSONObject(result);
+                mStorageId = jsonObject.getString("_id");
+                mAccessCode = jsonObject.getString("_access_code");
+            } catch (JSONException e) {
+                Timber.e(e, "Error parsing service start result");
+            } catch (IOException e) {
+                Timber.e(e, "Failed to start share-request");
+            }
+            // TODO: share-request errors are being ignored for development
+
             mHandlerThread = new HandlerThread("ImageThread");
             mHandlerThread.start();
             Handler captureHandler = new Handler(mHandlerThread.getLooper());
@@ -136,6 +154,7 @@ public class CaptureManager {
                     5
             );
 
+            // TODO: Restructure for handling orientation changes, e.g. easy pause/resume
             mProjection = mMediaProjectManager.getMediaProjection(resultCode, data);
             Surface surface = mImageReader.getSurface();
             mDisplay = mProjection.createVirtualDisplay(
@@ -158,23 +177,6 @@ public class CaptureManager {
 
             // NTS: Don't need the timer! Just track time in ImageReader Listener!
             // NTS: Figure out proper handlers for callbacks! When/How to spawn thread?
-            new AsyncTask<Void, Void, Void>() {
-                @Override
-                protected Void doInBackground(Void... params) {
-                    try {
-                        String result = createShareRequest();
-                        Timber.d(result);
-                        JSONObject jsonObject = new JSONObject(result);
-                        mAccessCode = jsonObject.getString("_access_code");
-                    } catch (JSONException e) {
-                        Timber.e(e, "Error parsing service start result");
-                        // Errors are ignored for now
-                    } catch (IOException e) {
-                        Timber.e(e, "Failed to start share-request");
-                    }
-                    return null;
-                }
-            }.execute();
             // TODO: Proper error handling, remove all Async tasks in favour of EventBus
         } finally {
             mImageLock.unlock();
@@ -184,7 +186,6 @@ public class CaptureManager {
     private void stopCapture() {
         mImageLock.lock();
         try {
-            mNotificationManager.cancel(NID_SCREEN_CAPTURE);
             mDisplay.release();
             mDisplay = null;
             mProjection.stop();
@@ -202,10 +203,8 @@ public class CaptureManager {
     /*  05/13/2015
      *  Temporary code to avoid writing whole new Retrofit interfaces for two calls
      */
-    public static final MediaType FORM_ENCODED
-            = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
-    public static final MediaType MEDIA_PNG
-            = MediaType.parse("image/png");
+    public static final MediaType FORM_ENCODED = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
+    public static final MediaType OCTET_STREAM = MediaType.parse("application/octet-stream");
 
     @DebugLog
     private String createShareRequest() throws IOException {
@@ -226,25 +225,31 @@ public class CaptureManager {
 
     @DebugLog
     private String uploadScreenCapture(String serviceId, File screenCapture) throws IOException {
-        RequestBody body = new MultipartBuilder()
-                .type(MultipartBuilder.FORM)
-                .addPart(
-                        Headers.of("Content-Disposition", "form-data; name=\"screen\""),
-                        RequestBody.create(MEDIA_PNG, screenCapture)
-                ).build();
-        String strBaseUri = mEndpoint.getUrl();
-        String strUploadUri = new Uri.Builder()
-                .encodedPath(strBaseUri)
-                .appendPath("service")
-                .appendEncodedPath(serviceId)
-                .appendPath("storage")
-                .toString();
-        Request request = new Request.Builder()
-                .url(strUploadUri)
-                .post(body)
-                .build();
-        Response response = mClient.newCall(request).execute();
-        return response.body().string();
+        // TODO: Use retrofit
+        mUploading = true;
+        try {
+            RequestBody body = new MultipartBuilder()
+                    .type(MultipartBuilder.FORM)
+                    .addPart(
+                            Headers.of("Content-Disposition", "form-data; name=\"screen\"; filename=\"temp\""),
+                            RequestBody.create(OCTET_STREAM, screenCapture)
+                    ).build();
+            String strBaseUri = mEndpoint.getUrl();
+            String strUploadUri = new Uri.Builder()
+                    .encodedPath(strBaseUri)
+                    .appendPath("service")
+                    .appendEncodedPath(serviceId)
+                    .appendPath("storage")
+                    .toString();
+            Request request = new Request.Builder()
+                    .url(strUploadUri)
+                    .post(body)
+                    .build();
+            Response response = mClient.newCall(request).execute();
+            return response.body().string();
+        } finally {
+            mUploading = false;
+        }
     }
     /*  05/13/2015
      *  End Temporary Code
@@ -259,15 +264,17 @@ public class CaptureManager {
                 new NotificationCompat.Builder(mContext)
                         .setSmallIcon(R.drawable.ic_launcher)
                         .setContentTitle("Screen Sharing")
-                        .setContentText("Active, touch to stop")
+                        .setContentText("Access Code: " + mAccessCode)
                         .setDefaults(NotificationCompat.DEFAULT_ALL)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent)
+                        .addAction(R.drawable.ic_close_white_36dp, "Stop sharing", pendingIntent)
                         .build()
         );
     }
 
     private final class ImageListener implements ImageReader.OnImageAvailableListener {
+        // TODO: Ensure that the last image is always uploaded, onImageAvailable should queue image
         private DateTime lastCaptureDeliveredAt;
         public ImageListener() {
             lastCaptureDeliveredAt = DateTime.now();
@@ -279,58 +286,62 @@ public class CaptureManager {
                 if(reader != mImageReader || mImageReader == null) {
                     return;
                 }
-                Timber.d("New image available for screen share!");
                 Image image = reader.acquireLatestImage();
-                if(!DateTime.now().isAfter(lastCaptureDeliveredAt.plusSeconds(1))) {
+                if(!DateTime.now().isAfter(lastCaptureDeliveredAt.plusMillis(500)) || mUploading) {
                     if (image != null) {
                         image.close();
                     }
                     return;
                 }
-                // Check time
-                if(image != null) {
-                    String outName = FILE_FORMAT.print(DateTime.now());
-                    File file = new File(mContext.getFilesDir(), outName);
-                    Bitmap bmp = null;
-                    OutputStream outFile = null;
-                    try {
-                        outFile = new BufferedOutputStream(new FileOutputStream(file));
-                        bmp = obtainBitmap(image);
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, outFile);
-                    } catch(IOException e) {
-                        Timber.e(e, "Failed to save screen capture.");
-                    } finally {
-                        if(outFile != null) {
-                            try {
-                                outFile.close();
-                            } catch (IOException e) {
-                                Timber.e(e, "Failed to close FileOutputStream.");
-                            }
-                        }
-                        if(bmp != null) {
-                            bmp.recycle();
-                        }
-                        image.close();
-                    }
-                    // After everything's been closed, it's flushed to file
-                    // TypedFile typedFile = new TypedFile("multipart/form-data", file);
-                    // File hasn't been closed yet
-                    new AsyncTask<File, Void, Void>() {
-                        @Override
-                        protected Void doInBackground(File... params) {
-                            try {
-                                uploadScreenCapture(mAccessCode, params[0]);
-                            } catch(IOException e) {
-                                Timber.e(e, "Failed to upload screen capture");
-                            } finally {
-                                params[0].delete();
-                            }
-                            return null;
-                        }
-                    }.execute(file);
+                if(image == null) {
+                    return;
                 }
+                lastCaptureDeliveredAt = DateTime.now();
+                String outName = FILE_FORMAT.print(DateTime.now());
+                mCounter = (mCounter + 1) % 60;
+                File file = File.createTempFile(
+                        outName,
+                        String.format("%d", mCounter),
+                        mContext.getCacheDir()
+                );
+                Bitmap bmp = null;
+                OutputStream fos = null;
+                try {
+                    fos = new BufferedOutputStream(new FileOutputStream(file));
+                    bmp = obtainBitmap(image);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 80, fos);
+                } catch(IOException e) {
+                    Timber.e(e, "Failed to save screen capture.");
+                } finally {
+                    if(fos != null) {
+                        try {
+                            fos.close();
+                        } catch (IOException e) {
+                            Timber.e(e, "Failed to close FileOutputStream.");
+                        }
+                    }
+                    if(bmp != null) {
+                        bmp.recycle();
+                    }
+                    image.close();
+                }
+                new AsyncTask<File, Void, Void>() {
+                    @Override
+                    protected Void doInBackground(File... params) {
+                        try {
+                            uploadScreenCapture(mStorageId, params[0]);
+                        } catch(IOException e) {
+                            Timber.e(e, "Failed to upload screen capture");
+                        } finally {
+                            params[0].delete();
+                        }
+                        return null;
+                    }
+                }.execute(file);
             } catch(IllegalStateException e) {
                 Timber.e("Y'all got a bug. Images are not being released.");
+            } catch(IOException e) {
+                Timber.e(e, "Failed to create temp file for image");
             } finally {
                 mImageLock.unlock();
             }
@@ -342,7 +353,11 @@ public class CaptureManager {
             int pixelStride = planes[0].getPixelStride();
             int rowStride = planes[0].getRowStride();
             int rowPadding = rowStride - pixelStride * mWidth;
-            Bitmap bmp = Bitmap.createBitmap(mWidth + rowPadding/pixelStride, mHeight, Bitmap.Config.ARGB_8888);
+            Bitmap bmp = Bitmap.createBitmap(
+                    mWidth+rowPadding/pixelStride,
+                    mHeight,
+                    Bitmap.Config.ARGB_8888
+            );
             bmp.copyPixelsFromBuffer(buffer);
             return bmp;
         }
