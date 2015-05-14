@@ -78,4 +78,50 @@ public interface CallbackService {
                                       @Query("end_time") String endTime,
                                       @Query("max") Integer max,
                                       Callback<Map<String, List<CallbackAdminRequest>>> callback);
+
+    // Service Storage API
+    @GET("/service/{service_id}/storage")
+    public Map<String, String> queryAllKeys(@Path("service_id") String serviceID);
+
+    @GET("/service/{service_id}/storage")
+    public void queryAllKeys(@Path("service_id") String serviceID,
+                             Callback<Map<String, String>> callback);
+
+    @GET("/service/{service_id}/storage/{key}")
+    public Response queryOneKey(@Path("service_id") String serviceID,
+                                @Path("key") String key);
+
+    @GET("/service/{service_id}/storage/{key}")
+    public void queryOneKey(@Path("service_id") String serviceID,
+                            @Path("key") String key,
+                            Callback<Response> callback);
+
+    @FormUrlEncoded
+    @POST("/service/{service_id}/storage")
+    public Response updateStorage(@Path("service_id") String serviceID,
+                                  @FieldMap Map<String, String> payload);
+
+    @FormUrlEncoded
+    @POST("/service/{service_id}/storage")
+    public void updateStorage(@Path("service_id") String serviceID,
+                              @FieldMap Map<String, String> payload,
+                              Callback<Response> callback);
+
+    @GET("/service/{service_id}/storage/binary/{key}")
+    public Response queryBinary(@Path("service_id") String serviceID,
+                                @Path("key") String key);
+
+    @GET("/service/{service_id}/storage/binary/{key}")
+    public void queryBinary(@Path("service_id") String serviceID,
+                            @Path("key") String key,
+                            Callback<Response> callback);
+
+    @DELETE("/service/{service_id}/storage/{key}")
+    public Response deleteKey(@Path("service_id") String serviceID,
+                              @Path("key") String key);
+
+    @DELETE("/service/{service_id}/storage/{key}")
+    public void deleteKey(@Path("service_id") String serviceID,
+                          @Path("key") String key,
+                          Callback<Response> callback);
 }

@@ -6,10 +6,12 @@ import android.preference.Preference;
 import android.support.v4.app.Fragment;
 import android.support.v4.preference.PreferenceFragment;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
+import com.genesys.gms.mobile.callback.demo.legacy.data.capture.CaptureManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.UnknownErrorEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.*;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.capture.StartCaptureEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsRequestInterceptor;
@@ -46,6 +48,15 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
 	public GenesysSampleActivity() {
         this.bus = EventBus.getDefault();
 	}
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode != CaptureManager.CREATE_SCREEN_CAPTURE) {
+            super.onActivityResult(requestCode, resultCode, data);
+            return;
+        }
+        bus.post(new StartCaptureEvent(resultCode, data));
+    }
 
     private void tryUpdateEndpoint() {
         String strHost = sharedPreferences.getString(Globals.PROPERTY_HOST, null);
@@ -325,6 +336,8 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
             intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             this.startActivity(intent);
             return true;
+        } else if(item.getItemId()==R.id.share_screen) {
+            CaptureManager.fireScreenCaptureEvent(this);
         }
         return true;
 	}

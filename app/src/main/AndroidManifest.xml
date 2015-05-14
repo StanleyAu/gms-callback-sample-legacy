@@ -48,6 +48,8 @@
 
         <service
             android:name=".data.push.GcmIntentService" />
+        <service
+            android:name=".data.capture.CaptureIntentService" />
 
         <activity
             android:name=".ui.LogActivity"

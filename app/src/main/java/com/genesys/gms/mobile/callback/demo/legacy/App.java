@@ -1,11 +1,10 @@
 package com.genesys.gms.mobile.callback.demo.legacy;
 
 import android.app.Application;
-import android.preference.PreferenceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackServiceManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.capture.CaptureManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.ChatServiceManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
-import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.LogbackFacadeTree;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
@@ -24,6 +23,7 @@ public class App extends Application {
     @Inject GcmManager gcmManager;
     @Inject CallbackServiceManager callbackServiceManager;
     @Inject ChatServiceManager chatServiceManager;
+    @Inject CaptureManager captureManager;
 
     @Override public void onCreate() {
         super.onCreate();
@@ -44,6 +44,7 @@ public class App extends Application {
         bus.register(gcmManager);
         bus.register(callbackServiceManager);
         bus.register(chatServiceManager);
+        bus.register(captureManager);
     }
 
     protected List<Object> getModules() {

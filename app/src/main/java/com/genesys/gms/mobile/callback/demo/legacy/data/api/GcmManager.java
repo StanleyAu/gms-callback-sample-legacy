@@ -23,8 +23,6 @@ import com.google.gson.JsonSyntaxException;
 import de.greenrobot.event.EventBus;
 import de.greenrobot.event.NoSubscriberEvent;
 import hugo.weaving.DebugLog;
-import org.json.JSONException;
-import org.json.JSONObject;
 import timber.log.Timber;
 
 import javax.inject.Inject;
@@ -53,7 +51,8 @@ public class GcmManager {
     private NotificationCompat.InboxStyle mInboxStyle;
 
     @Inject
-    public GcmManager(GoogleCloudMessaging googleCloudMessaging, Gson gson, SharedPreferences sharedPreferences, @ForApplication Context context) {
+    public GcmManager(NotificationManagerCompat notificationManager, GoogleCloudMessaging googleCloudMessaging, Gson gson, SharedPreferences sharedPreferences, @ForApplication Context context) {
+        this.mNotificationManager = notificationManager;
         this.googleCloudMessaging = googleCloudMessaging;
         this.gson = gson;
         this.bus = EventBus.getDefault();
@@ -166,17 +165,17 @@ public class GcmManager {
             .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         // TODO: Use String resources
-        getNotificationManager().notify(
-            NID_CALLBACK,
-            new NotificationCompat.Builder(context)
-                .setSmallIcon(R.drawable.ic_launcher)
-                .setContentTitle("Genesys Callback")
-                .setContentText("Your attention is needed!")
-                .setDefaults(NotificationCompat.DEFAULT_ALL)
-                .setAutoCancel(true)
-                .setOngoing(true)
-                .setContentIntent(pendingIntent)
-                .build()
+        mNotificationManager.notify(
+                NID_CALLBACK,
+                new NotificationCompat.Builder(context)
+                        .setSmallIcon(R.drawable.ic_launcher)
+                        .setContentTitle("Genesys Callback")
+                        .setContentText("Your attention is needed!")
+                        .setDefaults(NotificationCompat.DEFAULT_ALL)
+                        .setAutoCancel(true)
+                        .setOngoing(true)
+                        .setContentIntent(pendingIntent)
+                        .build()
         );
 
         return true;
@@ -220,7 +219,7 @@ public class GcmManager {
             .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         // TODO: Use String resources
-        getNotificationManager().notify(
+        mNotificationManager.notify(
             NID_CHAT,
             new NotificationCompat.Builder(context)
                 .setSmallIcon(R.drawable.ic_launcher)
@@ -235,13 +234,6 @@ public class GcmManager {
         );
 
         return true;
-    }
-
-    protected NotificationManagerCompat getNotificationManager() {
-        if(mNotificationManager==null) {
-            mNotificationManager = NotificationManagerCompat.from(context);
-        }
-        return mNotificationManager;
     }
 
     protected NotificationCompat.InboxStyle getInboxStyle() {

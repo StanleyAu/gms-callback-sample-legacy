@@ -3,6 +3,9 @@ package com.genesys.gms.mobile.callback.demo.legacy;
 import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.media.projection.MediaProjectionManager;
+import android.support.v4.app.NotificationManagerCompat;
+import android.view.WindowManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.DataModule;
 import com.genesys.gms.mobile.callback.demo.legacy.data.push.GcmIntentService;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -36,8 +39,19 @@ public class AppModule {
     }
 
     @Provides @Singleton
-    NotificationManager provideNotificationManager(@ForApplication Context context) {
-        return (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+    WindowManager provideWindowManager(@ForApplication Context context) {
+        return (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
+    }
+
+    @Provides @Singleton
+    NotificationManagerCompat provideNotificationManagerCompat(@ForApplication Context context) {
+        return NotificationManagerCompat.from(context);
+    }
+
+    @SuppressWarnings("ResourceType")
+    @Provides @Singleton
+    MediaProjectionManager provideMediaProjectionManager(@ForApplication Context context) {
+        return (MediaProjectionManager)context.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
     }
 
     @Provides @Singleton @ForApplication
