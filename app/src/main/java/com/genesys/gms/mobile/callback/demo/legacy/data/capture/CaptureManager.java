@@ -115,10 +115,6 @@ public class CaptureManager {
 
     public void onEventAsync(StopCaptureEvent event) {
         mNotificationManager.cancel(NID_SCREEN_CAPTURE);
-        if (mHandlerThread == null) {
-            Timber.d("Screen capture already stopped!");
-            return;
-        }
         stopCapture();
     }
 
@@ -188,6 +184,9 @@ public class CaptureManager {
 
     private void stopCapture() {
         synchronized (mReaderLock) {
+            if(mHandlerThread == null) {
+                return;
+            }
             mFutureTask.cancel(false);
             mDisplay.release();
             mDisplay = null;
