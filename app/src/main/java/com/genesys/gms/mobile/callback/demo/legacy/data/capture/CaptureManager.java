@@ -63,7 +63,7 @@ public class CaptureManager {
     private VirtualDisplay mDisplay;
     private ScheduledThreadPoolExecutor mExecutor;
     private ScheduledFuture<?> mFutureTask;
-    private File mLatestCapture;
+    private Bitmap mLatestCapture;
     private final ReentrantLock mReaderLock = new ReentrantLock();
     private final ReentrantLock mImageLock = new ReentrantLock();
     private int mWidth;
@@ -282,6 +282,10 @@ public class CaptureManager {
             }
             synchronized (mImageLock) {
                 if(mLatestCapture != null) {
+                    File file = saveImage(mLatestCapture);
+                    if(file == null) {
+                        return;
+                    }
                     new AsyncTask<File, Void, Void>() {
                         @Override
                         protected Void doInBackground(File... params) {
@@ -294,19 +298,43 @@ public class CaptureManager {
                             }
                             return null;
                         }
-                    }.execute(mLatestCapture);
+                    }.execute(file);
+                    mLatestCapture.recycle();
                 }
                 mLatestCapture = null;
             }
         }
     }
 
-    private final class ImageListener implements ImageReader.OnImageAvailableListener {
-        // TODO: Ensure that the last image is always uploaded, onImageAvailable should queue image
-        private DateTime lastCaptureDeliveredAt;
-        public ImageListener() {
-            lastCaptureDeliveredAt = DateTime.now();
+    private File saveImage(Bitmap bmp) {
+        String outName = FILE_FORMAT.print(DateTime.now());
+        mCounter = (mCounter + 1) % 60;
+        File file = null;
+        OutputStream fos = null;
+        try {
+            file = File.createTempFile(
+                    outName,
+                    String.format("%d", mCounter),
+                    mContext.getCacheDir()
+            );
+            fos = new BufferedOutputStream(new FileOutputStream(file));
+            bmp.compress(Bitmap.CompressFormat.JPEG, 70, fos);
+        } catch (IOException e) {
+            Timber.e(e, "Failed to save image to cache");
+            return null;
+        } finally {
+            if(fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    Timber.e(e, "Failed to close FileOutputStream");
+                }
+            }
         }
+        return file;
+    }
+
+    private final class ImageListener implements ImageReader.OnImageAvailableListener {
         @Override
         public void onImageAvailable(ImageReader reader) {
             try {
@@ -320,88 +348,20 @@ public class CaptureManager {
                 if(image == null) {
                     return;
                 }
-                if(!DateTime.now().isAfter(lastCaptureDeliveredAt.plusMillis(100))) {
-                    image.close();
+                Bitmap bmp = obtainBitmap(image);
+                if(bmp == null) {
                     return;
                 }
-                lastCaptureDeliveredAt = DateTime.now();
-                String outName = FILE_FORMAT.print(DateTime.now());
-                mCounter = (mCounter + 1) % 60;
-                File file = File.createTempFile(
-                        outName,
-                        String.format("%d", mCounter),
-                        mContext.getCacheDir()
-                );
-                Bitmap bmp = null;
-                OutputStream fos = null;
-                try {
-                    fos = new BufferedOutputStream(new FileOutputStream(file));
-                    bmp = obtainBitmap(image);
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 70, fos);
-                } catch(IOException e) {
-                    Timber.e(e, "Failed to save screen capture.");
-                } finally {
-                    if(fos != null) {
-                        try {
-                            fos.close();
-                        } catch (IOException e) {
-                            Timber.e(e, "Failed to close FileOutputStream.");
-                        }
-                    }
-                    if(bmp != null) {
-                        bmp.recycle();
-                    }
-                    image.close();
-                }
+                image.close();
                 synchronized (mImageLock) {
                     if(mLatestCapture != null) {
-                        mLatestCapture.delete();
+                        mLatestCapture.recycle();
                     }
-                    mLatestCapture = file;
+                    mLatestCapture = bmp;
                 }
             } catch(IllegalStateException e) {
                 Timber.e("Y'all got a bug. Images are not being released.");
-            } catch(IOException e) {
-                Timber.e(e, "Failed to create temp file for image");
             }
-        }
-
-        private File processImage(Image image) {
-            File file = null;
-            String outName = FILE_FORMAT.print(DateTime.now());
-            mCounter = (mCounter + 1) % 60;
-            try {
-                file = File.createTempFile(
-                        outName,
-                        String.format("%d", mCounter),
-                        mContext.getCacheDir()
-                );
-            } catch(IOException e) {
-                image.close();
-            }
-            Bitmap bmp = null;
-            OutputStream fos = null;
-            try {
-                fos = new BufferedOutputStream(new FileOutputStream(file));
-                bmp = obtainBitmap(image);
-                bmp.compress(Bitmap.CompressFormat.JPEG, 70, fos);
-            } catch(IOException e) {
-                Timber.e(e, "Failed to save screen capture.");
-                return null;
-            } finally {
-                if(fos != null) {
-                    try {
-                        fos.close();
-                    } catch (IOException e) {
-                        Timber.e(e, "Failed to close FileOutputStream.");
-                    }
-                }
-                if(bmp != null) {
-                    bmp.recycle();
-                }
-                image.close();
-            }
-            return file;
         }
 
         private Bitmap obtainBitmap(Image image) {
