@@ -1,7 +1,6 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.capture;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -17,7 +16,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.util.DisplayMetrics;
@@ -42,6 +40,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -57,10 +58,14 @@ public class CaptureManager {
             DateTimeFormat.forPattern("'ScreenCap_'yyyy-MM-dd-HH-mm-ss");
     private ImageReader mImageReader;
     private ImageListener mImageListener;
-    private ReentrantLock mImageLock = new ReentrantLock(true);
     private HandlerThread mHandlerThread = null;
     private MediaProjection mProjection;
     private VirtualDisplay mDisplay;
+    private ScheduledThreadPoolExecutor mExecutor;
+    private ScheduledFuture<?> mFutureTask;
+    private File mLatestCapture;
+    private final ReentrantLock mReaderLock = new ReentrantLock();
+    private final ReentrantLock mImageLock = new ReentrantLock();
     private int mWidth;
     private int mHeight;
     private String mStorageId;
@@ -85,6 +90,7 @@ public class CaptureManager {
         mEndpoint = endpoint;
         mBus = EventBus.getDefault();
         mImageListener = new ImageListener();
+        mExecutor = new ScheduledThreadPoolExecutor(1);
     }
 
     @SuppressWarnings("ResourceType")
@@ -124,8 +130,7 @@ public class CaptureManager {
     }
 
     private void startCapture(int resultCode, Intent data) {
-        mImageLock.lock();
-        try {
+        synchronized (mReaderLock) {
             try {
                 String result = createShareRequest();
                 Timber.d(result);
@@ -144,14 +149,14 @@ public class CaptureManager {
             Handler captureHandler = new Handler(mHandlerThread.getLooper());
 
             DisplayMetrics displayMetrics = getDisplayMetrics();
-            mWidth = displayMetrics.widthPixels;
-            mHeight = displayMetrics.heightPixels;
+            mWidth = displayMetrics.widthPixels / 2;
+            mHeight = displayMetrics.heightPixels / 2;
 
             mImageReader = ImageReader.newInstance(
                     mWidth,
                     mHeight,
                     PixelFormat.RGBA_8888,
-                    5
+                    2
             );
 
             // TODO: Restructure for handling orientation changes, e.g. easy pause/resume
@@ -174,18 +179,16 @@ public class CaptureManager {
             );
             mImageReader.setOnImageAvailableListener(mImageListener, captureHandler);
             notifyScreenCapture();
-
+            mFutureTask = mExecutor.scheduleAtFixedRate(new UploadTask(), 250, 250, TimeUnit.MILLISECONDS);
             // NTS: Don't need the timer! Just track time in ImageReader Listener!
             // NTS: Figure out proper handlers for callbacks! When/How to spawn thread?
             // TODO: Proper error handling, remove all Async tasks in favour of EventBus
-        } finally {
-            mImageLock.unlock();
         }
     }
 
     private void stopCapture() {
-        mImageLock.lock();
-        try {
+        synchronized (mReaderLock) {
+            mFutureTask.cancel(false);
             mDisplay.release();
             mDisplay = null;
             mProjection.stop();
@@ -195,8 +198,6 @@ public class CaptureManager {
             if (mHandlerThread.quit()) {
                 mHandlerThread = null;
             }
-        } finally {
-            mImageLock.unlock();
         }
     }
 
@@ -273,6 +274,33 @@ public class CaptureManager {
         );
     }
 
+    private final class UploadTask implements Runnable {
+        @Override
+        public void run() {
+            if(mUploading) {
+                return;
+            }
+            synchronized (mImageLock) {
+                if(mLatestCapture != null) {
+                    new AsyncTask<File, Void, Void>() {
+                        @Override
+                        protected Void doInBackground(File... params) {
+                            try {
+                                uploadScreenCapture(mStorageId, params[0]);
+                            } catch(IOException e) {
+                                Timber.e(e, "Failed to upload screen capture");
+                            } finally {
+                                params[0].delete();
+                            }
+                            return null;
+                        }
+                    }.execute(mLatestCapture);
+                }
+                mLatestCapture = null;
+            }
+        }
+    }
+
     private final class ImageListener implements ImageReader.OnImageAvailableListener {
         // TODO: Ensure that the last image is always uploaded, onImageAvailable should queue image
         private DateTime lastCaptureDeliveredAt;
@@ -281,19 +309,19 @@ public class CaptureManager {
         }
         @Override
         public void onImageAvailable(ImageReader reader) {
-            mImageLock.lock();
             try {
-                if(reader != mImageReader || mImageReader == null) {
-                    return;
-                }
-                Image image = reader.acquireLatestImage();
-                if(!DateTime.now().isAfter(lastCaptureDeliveredAt.plusMillis(500)) || mUploading) {
-                    if (image != null) {
-                        image.close();
+                Image image = null;
+                synchronized (mReaderLock) {
+                    if (reader != mImageReader || mImageReader == null) {
+                        return;
                     }
-                    return;
+                    image = reader.acquireLatestImage();
                 }
                 if(image == null) {
+                    return;
+                }
+                if(!DateTime.now().isAfter(lastCaptureDeliveredAt.plusMillis(100))) {
+                    image.close();
                     return;
                 }
                 lastCaptureDeliveredAt = DateTime.now();
@@ -309,7 +337,7 @@ public class CaptureManager {
                 try {
                     fos = new BufferedOutputStream(new FileOutputStream(file));
                     bmp = obtainBitmap(image);
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 80, fos);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 70, fos);
                 } catch(IOException e) {
                     Timber.e(e, "Failed to save screen capture.");
                 } finally {
@@ -325,26 +353,55 @@ public class CaptureManager {
                     }
                     image.close();
                 }
-                new AsyncTask<File, Void, Void>() {
-                    @Override
-                    protected Void doInBackground(File... params) {
-                        try {
-                            uploadScreenCapture(mStorageId, params[0]);
-                        } catch(IOException e) {
-                            Timber.e(e, "Failed to upload screen capture");
-                        } finally {
-                            params[0].delete();
-                        }
-                        return null;
+                synchronized (mImageLock) {
+                    if(mLatestCapture != null) {
+                        mLatestCapture.delete();
                     }
-                }.execute(file);
+                    mLatestCapture = file;
+                }
             } catch(IllegalStateException e) {
                 Timber.e("Y'all got a bug. Images are not being released.");
             } catch(IOException e) {
                 Timber.e(e, "Failed to create temp file for image");
-            } finally {
-                mImageLock.unlock();
             }
+        }
+
+        private File processImage(Image image) {
+            File file = null;
+            String outName = FILE_FORMAT.print(DateTime.now());
+            mCounter = (mCounter + 1) % 60;
+            try {
+                file = File.createTempFile(
+                        outName,
+                        String.format("%d", mCounter),
+                        mContext.getCacheDir()
+                );
+            } catch(IOException e) {
+                image.close();
+            }
+            Bitmap bmp = null;
+            OutputStream fos = null;
+            try {
+                fos = new BufferedOutputStream(new FileOutputStream(file));
+                bmp = obtainBitmap(image);
+                bmp.compress(Bitmap.CompressFormat.JPEG, 70, fos);
+            } catch(IOException e) {
+                Timber.e(e, "Failed to save screen capture.");
+                return null;
+            } finally {
+                if(fos != null) {
+                    try {
+                        fos.close();
+                    } catch (IOException e) {
+                        Timber.e(e, "Failed to close FileOutputStream.");
+                    }
+                }
+                if(bmp != null) {
+                    bmp.recycle();
+                }
+                image.close();
+            }
+            return file;
         }
 
         private Bitmap obtainBitmap(Image image) {
