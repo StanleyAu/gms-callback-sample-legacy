@@ -64,8 +64,6 @@ public class CaptureManager {
     private ScheduledThreadPoolExecutor mExecutor;
     private ScheduledFuture<?> mFutureTask;
     private Bitmap mLatestCapture;
-    private final ReentrantLock mReaderLock = new ReentrantLock();
-    private final ReentrantLock mImageLock = new ReentrantLock();
     private int mWidth;
     private int mHeight;
     private String mStorageId;
@@ -79,6 +77,20 @@ public class CaptureManager {
     private final OkHttpClient mClient;
     private final GmsEndpoint mEndpoint;
     private final EventBus mBus;
+    private final ReentrantLock mReaderLock = new ReentrantLock();
+    private final ReentrantLock mImageLock = new ReentrantLock();
+
+    private class DisplayInfo {
+        final int width;
+        final int height;
+        final int density;
+
+        public DisplayInfo(int width, int height, int density) {
+            this.width = width;
+            this.height = height;
+            this.density = density;
+        }
+    }
 
     @Inject
     public CaptureManager(WindowManager windowManager, MediaProjectionManager mediaProjectionManager, NotificationManagerCompat notificationManager, OkHttpClient client, GmsEndpoint endpoint, @ForApplication Context context) {
@@ -95,16 +107,12 @@ public class CaptureManager {
 
     @SuppressWarnings("ResourceType")
     public static void fireScreenCaptureEvent(Activity activity) {
-        MediaProjectionManager mediaProjectionManager = (MediaProjectionManager)activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         Intent intent = mediaProjectionManager.createScreenCaptureIntent();
         activity.startActivityForResult(intent, CREATE_SCREEN_CAPTURE);
     }
 
     public void onEventAsync(StartCaptureEvent event) {
-        if (mHandlerThread != null) {
-            Timber.d("Screen capture already running!");
-            return;
-        }
         if (event.resultCode == 0) {
             Timber.d("Permission for screen capture not granted.");
         } else {
@@ -119,14 +127,80 @@ public class CaptureManager {
     }
 
     // On start record, initialize ImageReader with screen dimensions
-    private DisplayMetrics getDisplayMetrics() {
+    private DisplayInfo getDisplayInfo() {
         DisplayMetrics displayMetrics = new DisplayMetrics();
         mWindowManager.getDefaultDisplay().getRealMetrics(displayMetrics);
-        return displayMetrics;
+        /*
+        Configuration configuration = mContext.getResources().getConfiguration();
+        boolean isLandscape = configuration.orientation == ORIENTATION_LANDSCAPE;
+        */
+        // TODO: Screen capture dimensions/scaling configuration
+        return new DisplayInfo(
+                displayMetrics.widthPixels,
+                displayMetrics.heightPixels,
+                displayMetrics.densityDpi
+        );
+    }
+
+    private void constructFrame() {
+        Handler captureHandler = new Handler(mHandlerThread.getLooper());
+
+        DisplayInfo displayInfo = getDisplayInfo();
+        mWidth = displayInfo.width / 2;
+        mHeight = displayInfo.height / 2;
+
+        mImageReader = ImageReader.newInstance(
+                mWidth,
+                mHeight,
+                PixelFormat.RGBA_8888,
+                2
+        );
+        // TODO: Restructure for handling orientation changes, e.g. easy pause/resume
+        Surface surface = mImageReader.getSurface();
+        mDisplay = mProjection.createVirtualDisplay(
+                DISPLAY_NAME,
+                mWidth,
+                mHeight,
+                displayInfo.density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION,
+                surface,
+                new VirtualDisplay.Callback() {
+                    @Override
+                    public void onPaused() {
+                        Timber.d("Virtual Display Paused");
+                    }
+
+                    @Override
+                    public void onResumed() {
+                        Timber.d("Virtual Display Resumed");
+                    }
+
+                    @Override
+                    public void onStopped() {
+                        Timber.d("Virtual Display Stopped");
+                        mBus.post(new StopCaptureEvent());
+                    }
+                },
+                captureHandler
+        );
+        mImageReader.setOnImageAvailableListener(mImageListener, captureHandler);
+    }
+
+    private void deconstructFrame() {
+        mDisplay.release();
+        mDisplay = null;
+        mProjection.stop();
+        mProjection = null;
+        mImageReader.close();
+        mImageReader = null;
     }
 
     private void startCapture(int resultCode, Intent data) {
         synchronized (mReaderLock) {
+            if (mHandlerThread != null) {
+                Timber.d("Screen capture already running!");
+                return;
+            }
             try {
                 String result = createShareRequest();
                 Timber.d(result);
@@ -138,42 +212,11 @@ public class CaptureManager {
             } catch (IOException e) {
                 Timber.e(e, "Failed to start share-request");
             }
-            // TODO: share-request errors are being ignored for development
-
             mHandlerThread = new HandlerThread("ImageThread");
             mHandlerThread.start();
-            Handler captureHandler = new Handler(mHandlerThread.getLooper());
-
-            DisplayMetrics displayMetrics = getDisplayMetrics();
-            mWidth = displayMetrics.widthPixels / 2;
-            mHeight = displayMetrics.heightPixels / 2;
-
-            mImageReader = ImageReader.newInstance(
-                    mWidth,
-                    mHeight,
-                    PixelFormat.RGBA_8888,
-                    2
-            );
-
-            // TODO: Restructure for handling orientation changes, e.g. easy pause/resume
+            // TODO: share-request errors are being ignored for development
             mProjection = mMediaProjectManager.getMediaProjection(resultCode, data);
-            Surface surface = mImageReader.getSurface();
-            mDisplay = mProjection.createVirtualDisplay(
-                    DISPLAY_NAME,
-                    mWidth,
-                    mHeight,
-                    displayMetrics.densityDpi,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION,
-                    surface,
-                    new VirtualDisplay.Callback() {
-                        @Override
-                        public void onStopped() {
-                            mBus.post(new StopCaptureEvent());
-                        }
-                    },
-                    captureHandler
-            );
-            mImageReader.setOnImageAvailableListener(mImageListener, captureHandler);
+            constructFrame();
             notifyScreenCapture();
             mFutureTask = mExecutor.scheduleAtFixedRate(new UploadTask(), 250, 250, TimeUnit.MILLISECONDS);
             // NTS: Don't need the timer! Just track time in ImageReader Listener!
@@ -184,16 +227,11 @@ public class CaptureManager {
 
     private void stopCapture() {
         synchronized (mReaderLock) {
-            if(mHandlerThread == null) {
+            if (mHandlerThread == null) {
                 return;
             }
             mFutureTask.cancel(false);
-            mDisplay.release();
-            mDisplay = null;
-            mProjection.stop();
-            mProjection = null;
-            mImageReader.close();
-            mImageReader = null;
+            deconstructFrame();
             if (mHandlerThread.quit()) {
                 mHandlerThread = null;
             }
@@ -276,13 +314,13 @@ public class CaptureManager {
     private final class UploadTask implements Runnable {
         @Override
         public void run() {
-            if(mUploading) {
+            if (mUploading) {
                 return;
             }
             synchronized (mImageLock) {
-                if(mLatestCapture != null) {
+                if (mLatestCapture != null) {
                     File file = saveImage(mLatestCapture);
-                    if(file == null) {
+                    if (file == null) {
                         return;
                     }
                     new AsyncTask<File, Void, Void>() {
@@ -290,7 +328,7 @@ public class CaptureManager {
                         protected Void doInBackground(File... params) {
                             try {
                                 uploadScreenCapture(mStorageId, params[0]);
-                            } catch(IOException e) {
+                            } catch (IOException e) {
                                 Timber.e(e, "Failed to upload screen capture");
                             } finally {
                                 params[0].delete();
@@ -322,7 +360,7 @@ public class CaptureManager {
             Timber.e(e, "Failed to save image to cache");
             return null;
         } finally {
-            if(fos != null) {
+            if (fos != null) {
                 try {
                     fos.close();
                 } catch (IOException e) {
@@ -344,21 +382,21 @@ public class CaptureManager {
                     }
                     image = reader.acquireLatestImage();
                 }
-                if(image == null) {
+                if (image == null) {
                     return;
                 }
                 Bitmap bmp = obtainBitmap(image);
-                if(bmp == null) {
+                if (bmp == null) {
                     return;
                 }
                 image.close();
                 synchronized (mImageLock) {
-                    if(mLatestCapture != null) {
+                    if (mLatestCapture != null) {
                         mLatestCapture.recycle();
                     }
                     mLatestCapture = bmp;
                 }
-            } catch(IllegalStateException e) {
+            } catch (IllegalStateException e) {
                 Timber.e("Y'all got a bug. Images are not being released.");
             }
         }
@@ -370,12 +408,13 @@ public class CaptureManager {
             int rowStride = planes[0].getRowStride();
             int rowPadding = rowStride - pixelStride * mWidth;
             Bitmap bmp = Bitmap.createBitmap(
-                    mWidth+rowPadding/pixelStride,
+                    mWidth + rowPadding / pixelStride,
                     mHeight,
                     Bitmap.Config.ARGB_8888
             );
             bmp.copyPixelsFromBuffer(buffer);
-            return bmp;
+            // Crop image padding
+            return Bitmap.createBitmap(bmp, 0, 0, mWidth, mHeight);
         }
     }
 }
