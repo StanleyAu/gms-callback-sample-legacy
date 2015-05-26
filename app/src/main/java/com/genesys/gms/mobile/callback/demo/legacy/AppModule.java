@@ -1,13 +1,12 @@
 package com.genesys.gms.mobile.callback.demo.legacy;
 
 import android.app.Application;
-import android.app.NotificationManager;
 import android.content.Context;
 import android.media.projection.MediaProjectionManager;
 import android.support.v4.app.NotificationManagerCompat;
 import android.view.WindowManager;
+import com.genesys.gms.mobile.callback.demo.legacy.common.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.data.DataModule;
-import com.genesys.gms.mobile.callback.demo.legacy.data.push.GcmIntentService;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import dagger.Module;
 import dagger.Provides;
@@ -19,8 +18,7 @@ import javax.inject.Singleton;
  */
 @Module(
     injects = {
-        App.class,
-        GcmIntentService.class
+        App.class
     },
     includes = {
         DataModule.class

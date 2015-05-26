@@ -1,7 +1,8 @@
-package com.genesys.gms.mobile.callback.demo.legacy;
+package com.genesys.gms.mobile.callback.demo.legacy.common;
 
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.App;
 import com.genesys.gms.mobile.callback.demo.legacy.ui.UiModule;
 import dagger.ObjectGraph;
 

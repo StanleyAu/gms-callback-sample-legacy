@@ -2,8 +2,8 @@ package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
 import android.content.Context;
 import com.genesys.gms.mobile.callback.demo.legacy.AppModule;
-import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
-import com.genesys.gms.mobile.callback.demo.legacy.ForActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.common.BaseActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.common.ForActivity;
 import dagger.Module;
 import dagger.Provides;
 

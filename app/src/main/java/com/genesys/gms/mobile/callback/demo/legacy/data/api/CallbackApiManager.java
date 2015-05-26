@@ -2,7 +2,6 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.*;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.callback.*;
@@ -10,10 +9,8 @@ import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import com.genesys.gms.mobile.callback.demo.legacy.util.Globals;
 import com.genesys.gms.mobile.callback.demo.legacy.util.TimeHelper;
 import com.google.gson.Gson;
-import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
-import com.squareup.okhttp.RequestBody;
 import de.greenrobot.event.EventBus;
 import hugo.weaving.DebugLog;
 import org.joda.time.DateTime;
@@ -25,8 +22,6 @@ import timber.log.Timber;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,14 +30,14 @@ import java.util.Map;
  * Created by stau on 2/3/2015.
  */
 @Singleton
-public class CallbackServiceManager {
+public class CallbackApiManager {
     // TODO: Convert events to use Bundles internally
     // TODO: Create a BundleTypeAdapter or use one from funf-open-sensing-framework
     private static final String GMS_USER = "gms_user";
     private static final String SERVICE_PATH = "service";
     private static final String CHECK_QUEUE_POSITION_SERVICE_NAME = "check-queue-position";
 
-    private final CallbackService callbackService;
+    private final CallbackApi callbackApi;
     private final GmsEndpoint gmsEndpoint;
     private final OkHttpClient httpClient;
     private final Gson gson;
@@ -50,12 +45,12 @@ public class CallbackServiceManager {
     private final SharedPreferences sharedPreferences;
 
     @Inject @DebugLog
-    public CallbackServiceManager(CallbackService callbackService,
-                                  GmsEndpoint gmsEndpoint,
-                                  OkHttpClient httpClient,
-                                  Gson gson,
-                                  SharedPreferences sharedPreferences) {
-        this.callbackService = callbackService;
+    public CallbackApiManager(CallbackApi callbackApi,
+                              GmsEndpoint gmsEndpoint,
+                              OkHttpClient httpClient,
+                              Gson gson,
+                              SharedPreferences sharedPreferences) {
+        this.callbackApi = callbackApi;
         this.gmsEndpoint = gmsEndpoint;
         this.httpClient = httpClient;
         this.gson = gson;
@@ -76,7 +71,7 @@ public class CallbackServiceManager {
             params.putAll(event.properties);
         }
 
-        callbackService.startCallback(event.serviceName, params, new Callback<CallbackDialog>() {
+        callbackApi.startCallback(event.serviceName, params, new Callback<CallbackDialog>() {
             @Override
             public void success(CallbackDialog callbackDialog, Response response) {
                 bus.post(new CallbackStartDoneEvent(callbackDialog));
@@ -97,7 +92,7 @@ public class CallbackServiceManager {
     }
 
     public void onEvent(CallbackCancelEvent event) {
-        callbackService.cancelCallback(event.serviceName, event.serviceID, new Callback<Response>() {
+        callbackApi.cancelCallback(event.serviceName, event.serviceID, new Callback<Response>() {
             @Override
             public void success(Response response, Response response2) {
                 bus.post(new CallbackCancelDoneEvent());
@@ -126,7 +121,7 @@ public class CallbackServiceManager {
         if(event.properties != null) {
             params.putAll(event.properties);
         }
-        callbackService.updateCallback(event.serviceName, event.serviceID, params, new Callback<Response>() {
+        callbackApi.updateCallback(event.serviceName, event.serviceID, params, new Callback<Response>() {
             @Override
             public void success(Response response, Response response2) {
                 bus.post(new CallbackUpdateDoneEvent());
@@ -152,7 +147,7 @@ public class CallbackServiceManager {
         if(event.properties != null) {
             params.putAll(event.properties);
         }
-        callbackService.queryCallback(event.serviceName, params, new Callback<List<CallbackRequest>>() {
+        callbackApi.queryCallback(event.serviceName, params, new Callback<List<CallbackRequest>>() {
             @Override
             public void success(List<CallbackRequest> callbackRequests, Response response) {
                 bus.post(new CallbackQueryDoneEvent(callbackRequests));
@@ -173,7 +168,7 @@ public class CallbackServiceManager {
     }
 
     public void onEvent(CallbackAvailabilityEvent event) {
-        callbackService.queryAvailability(
+        callbackApi.queryAvailability(
             event.serviceName,
             event.start,
             event.numberOfDays,
@@ -206,7 +201,7 @@ public class CallbackServiceManager {
         if(event.end_time != null) {
             strEndTime = TimeHelper.serializeUTCTime(event.end_time);
         }
-        callbackService.queryCallbackAdmin(event.target, strEndTime, event.max, new Callback<Map<String, List<CallbackAdminRequest>>>() {
+        callbackApi.queryCallbackAdmin(event.target, strEndTime, event.max, new Callback<Map<String, List<CallbackAdminRequest>>>() {
             @Override
             public void success(Map<String, List<CallbackAdminRequest>> stringListMap, Response response) {
                 bus.post(new CallbackAdminDoneEvent(stringListMap));
@@ -316,7 +311,7 @@ public class CallbackServiceManager {
                         }while(charsRead>0);
                         String body = builder.toString();
 
-                        Log.d("CallbackServiceManager", "CheckQueue Response: " + body);
+                        Log.d("CallbackApiManager", "CheckQueue Response: " + body);
                         callbackQueuePosition = gson.fromJson(body, CallbackQueuePosition.class);
                         */
                         callbackQueuePosition = gson.fromJson(response.body().charStream(), CallbackQueuePosition.class);

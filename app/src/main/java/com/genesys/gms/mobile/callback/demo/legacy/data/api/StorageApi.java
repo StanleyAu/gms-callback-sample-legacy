@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Created by stau on 5/7/2015.
  */
-public interface StorageService {
+public interface StorageApi {
     @FormUrlEncoded
     @POST("/storage/{ttl}")
     public Response create(@Path("ttl") int ttl,

@@ -1,4 +1,4 @@
-package com.genesys.gms.mobile.callback.demo.legacy;
+package com.genesys.gms.mobile.callback.demo.legacy.common;
 
 import javax.inject.Qualifier;
 import java.lang.annotation.Retention;

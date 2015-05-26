@@ -18,7 +18,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import com.genesys.gms.mobile.callback.demo.legacy.BaseFragment;
+import com.genesys.gms.mobile.callback.demo.legacy.common.BaseFragment;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 
 // TODO: make log scroll with inertia

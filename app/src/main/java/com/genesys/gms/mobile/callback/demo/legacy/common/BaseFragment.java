@@ -1,4 +1,4 @@
-package com.genesys.gms.mobile.callback.demo.legacy;
+package com.genesys.gms.mobile.callback.demo.legacy.common;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;

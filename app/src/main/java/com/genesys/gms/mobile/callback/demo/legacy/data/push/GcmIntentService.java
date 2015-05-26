@@ -2,9 +2,16 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.push;
 
 import android.app.IntentService;
 import android.content.Intent;
+import com.genesys.gms.mobile.callback.demo.legacy.App;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.gcm.GcmReceiveEvent;
+import com.genesys.gms.mobile.callback.demo.legacy.ui.UiModule;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
+import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
+
+import javax.inject.Inject;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by stau on 11/27/2014.
@@ -13,8 +20,8 @@ import de.greenrobot.event.EventBus;
  * onto the Otto bus for the GcmManager or MainFragment to process
  */
 public class GcmIntentService extends IntentService {
-
     public static final String GCM_NOTIFICATION_ID = "gcm_notification_id";
+    @Inject GoogleCloudMessaging gcm;
     private final EventBus bus;
 
     public GcmIntentService() {
@@ -24,7 +31,6 @@ public class GcmIntentService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        GoogleCloudMessaging gcm = GoogleCloudMessaging.getInstance(this);
         String messageType = gcm.getMessageType(intent);
 
         GcmReceiveEvent event = new GcmReceiveEvent(intent, false);
@@ -43,4 +49,26 @@ public class GcmIntentService extends IntentService {
 
         GcmBroadcastReceiver.completeWakefulIntent(intent);
     }
+
+    // Dagger wiring
+    private ObjectGraph serviceGraph;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        App application = (App)getApplication();
+        serviceGraph = application.getApplicationGraph().plus(getModules().toArray());
+        serviceGraph.inject(this);
+    }
+
+    @Override
+    public void onDestroy() {
+        serviceGraph = null;
+        super.onDestroy();
+    }
+
+    protected List<Object> getModules() {
+        return Arrays.<Object>asList(new GcmModule(this));
+    }
+    // End Dagger wiring
 }

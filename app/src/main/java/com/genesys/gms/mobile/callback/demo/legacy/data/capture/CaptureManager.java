@@ -21,7 +21,7 @@ import android.support.v4.app.NotificationManagerCompat;
 import android.util.DisplayMetrics;
 import android.view.Surface;
 import android.view.WindowManager;
-import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
+import com.genesys.gms.mobile.callback.demo.legacy.common.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.capture.StartCaptureEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.capture.StopCaptureEvent;

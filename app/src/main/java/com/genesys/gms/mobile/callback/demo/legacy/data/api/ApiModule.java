@@ -1,7 +1,6 @@
 package com.genesys.gms.mobile.callback.demo.legacy.data.api;
 
 import android.content.SharedPreferences;
-import android.util.Log;
 import com.genesys.gms.mobile.callback.demo.legacy.BuildConfig;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsRequestInterceptor;
@@ -80,12 +79,12 @@ public class ApiModule {
     }
 
     @Provides @Singleton
-    CallbackService provideCallbackService(RestAdapter restAdapter) {
-        return restAdapter.create(CallbackService.class);
+    CallbackApi provideCallbackService(RestAdapter restAdapter) {
+        return restAdapter.create(CallbackApi.class);
     }
 
     @Provides @Singleton
-    ChatService provideChatService(RestAdapter restAdapter) {
-        return restAdapter.create(ChatService.class);
+    ChatApi provideChatService(RestAdapter restAdapter) {
+        return restAdapter.create(ChatApi.class);
     }
 }

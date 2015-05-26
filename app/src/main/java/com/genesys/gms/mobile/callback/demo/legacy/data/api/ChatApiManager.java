@@ -18,18 +18,18 @@ import javax.inject.Singleton;
  * Created by stau on 2/6/2015.
  */
 @Singleton
-public class ChatServiceManager {
-    private final ChatService chatService;
+public class ChatApiManager {
+    private final ChatApi chatApi;
     private final EventBus bus;
 
     @Inject @DebugLog
-    public ChatServiceManager(ChatService chatService) {
-        this.chatService = chatService;
+    public ChatApiManager(ChatApi chatApi) {
+        this.chatApi = chatApi;
         this.bus = EventBus.getDefault();
     }
 
     public void onEvent(ChatStartEvent event) {
-        chatService.startChat(
+        chatApi.startChat(
             event.serviceId,
             event.verbose,
             event.notifyBy,
@@ -68,7 +68,7 @@ public class ChatServiceManager {
     }
 
     public void onEvent(ChatSendEvent event) {
-        chatService.send(
+        chatApi.send(
             event.serviceId,
             event.message,
             event.verbose,
@@ -99,7 +99,7 @@ public class ChatServiceManager {
     }
 
     public void onEvent(ChatRefreshEvent event) {
-        chatService.refresh(
+        chatApi.refresh(
             event.serviceId,
             event.transcriptPosition,
             event.message,
@@ -131,7 +131,7 @@ public class ChatServiceManager {
     }
 
     public void onEvent(ChatStartTypingEvent event) {
-        chatService.startTyping(event.serviceId, event.verbose, new Callback<ChatResponse>() {
+        chatApi.startTyping(event.serviceId, event.verbose, new Callback<ChatResponse>() {
             @Override
             public void success(ChatResponse chatResponse, Response response) {
                 bus.post(new ChatResponseEvent(
@@ -155,7 +155,7 @@ public class ChatServiceManager {
     }
 
     public void onEvent(ChatStopTypingEvent event) {
-        chatService.stopTyping(event.serviceId, event.verbose, new Callback<ChatResponse>() {
+        chatApi.stopTyping(event.serviceId, event.verbose, new Callback<ChatResponse>() {
             @Override
             public void success(ChatResponse chatResponse, Response response) {
                 bus.post(new ChatResponseEvent(
@@ -179,7 +179,7 @@ public class ChatServiceManager {
     }
 
     public void onEvent(ChatDisconnectEvent event) {
-        chatService.disconnect(event.serviceId, event.verbose, new Callback<ChatResponse>() {
+        chatApi.disconnect(event.serviceId, event.verbose, new Callback<ChatResponse>() {
             @Override
             public void success(ChatResponse chatResponse, Response response) {
                 bus.post(new ChatResponseEvent(
@@ -203,7 +203,7 @@ public class ChatServiceManager {
     }
 
     public void onEvent(ChatCreateBasicEvent event) {
-        chatService.basicChat(event.verbose, event.params, new Callback<ChatBasicResponse>() {
+        chatApi.basicChat(event.verbose, event.params, new Callback<ChatBasicResponse>() {
             @Override
             public void success(ChatBasicResponse chatBasicResponse, Response response) {
                 bus.post(new ChatBasicResponseEvent(chatBasicResponse));

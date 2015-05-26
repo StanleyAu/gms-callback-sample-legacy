@@ -4,7 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
+import com.genesys.gms.mobile.callback.demo.legacy.common.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.ApiModule;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.TranscriptEntry;
 import com.genesys.gms.mobile.callback.demo.legacy.data.gson.DateTimeTypeAdapter;
@@ -26,8 +26,6 @@ import org.joda.time.format.DateTimeFormatter;
 import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
-
-import static android.content.Context.MODE_PRIVATE;
 
 /**
  * Created by stau on 11/27/2014.

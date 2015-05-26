@@ -8,7 +8,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import com.genesys.gms.mobile.callback.demo.legacy.ForApplication;
+import com.genesys.gms.mobile.callback.demo.legacy.common.ForApplication;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmChatMessage;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.GcmSyncMessage;

@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * Created by stau on 06/10/2014.
  */
-public interface CallbackService {
+public interface CallbackApi {
     @POST("/service/callback/{service_name}")
     public CallbackDialog startCallback(@Path("service_name") String serviceName,
                                                     @Body Map<String, String> params);

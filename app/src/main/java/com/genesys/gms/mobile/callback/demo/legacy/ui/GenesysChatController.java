@@ -1,10 +1,8 @@
 package com.genesys.gms.mobile.callback.demo.legacy.ui;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import com.genesys.gms.mobile.callback.demo.legacy.ForActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.client.CometClient;
 import com.genesys.gms.mobile.callback.demo.legacy.client.CometHandler;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo.ChatCometResponse;

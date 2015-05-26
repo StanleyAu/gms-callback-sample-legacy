@@ -8,7 +8,7 @@ import android.support.v4.view.ViewPager;
 import android.view.Menu;
 import android.view.ViewGroup;
 import com.astuetz.PagerSlidingTabStrip;
-import com.genesys.gms.mobile.callback.demo.legacy.BaseActivity;
+import com.genesys.gms.mobile.callback.demo.legacy.common.BaseActivity;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 
 import java.util.HashMap;

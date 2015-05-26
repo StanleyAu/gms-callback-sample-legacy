@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * Created by stau on 2/6/2015.
  */
-public interface ChatService {
+public interface ChatApi {
     @FormUrlEncoded
     @POST("/service/{service_id}/ixn/chat")
     public ChatResponse startChat(@Path("service_id") String serviceId,

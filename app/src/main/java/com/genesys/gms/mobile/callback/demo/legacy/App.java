@@ -1,9 +1,9 @@
 package com.genesys.gms.mobile.callback.demo.legacy;
 
 import android.app.Application;
-import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackServiceManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackApiManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.capture.CaptureManager;
-import com.genesys.gms.mobile.callback.demo.legacy.data.api.ChatServiceManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.api.ChatApiManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.util.LogbackFacadeTree;
 import dagger.ObjectGraph;
@@ -21,8 +21,10 @@ public class App extends Application {
     private ObjectGraph applicationGraph;
     private EventBus bus;
     @Inject GcmManager gcmManager;
-    @Inject CallbackServiceManager callbackServiceManager;
-    @Inject ChatServiceManager chatServiceManager;
+    @Inject
+    CallbackApiManager callbackApiManager;
+    @Inject
+    ChatApiManager chatApiManager;
     @Inject CaptureManager captureManager;
 
     @Override public void onCreate() {
@@ -42,8 +44,8 @@ public class App extends Application {
 
     public void registerManagers() {
         bus.register(gcmManager);
-        bus.register(callbackServiceManager);
-        bus.register(chatServiceManager);
+        bus.register(callbackApiManager);
+        bus.register(chatApiManager);
         bus.register(captureManager);
     }
 
@@ -51,7 +53,7 @@ public class App extends Application {
         return Arrays.<Object>asList(new AppModule(this));
     }
 
-    ObjectGraph getApplicationGraph() {
+    public ObjectGraph getApplicationGraph() {
         return applicationGraph;
     }
 }
