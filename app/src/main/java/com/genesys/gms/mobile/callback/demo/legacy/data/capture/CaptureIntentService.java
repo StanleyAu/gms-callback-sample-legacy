@@ -10,16 +10,16 @@ import timber.log.Timber;
  * Created by stau on 5/14/2015.
  */
 public class CaptureIntentService extends IntentService {
-    private final EventBus bus;
+  private final EventBus bus;
 
-    public CaptureIntentService() {
-        super("CaptureIntentService");
-        bus = EventBus.getDefault();
-    }
+  public CaptureIntentService() {
+    super("CaptureIntentService");
+    bus = EventBus.getDefault();
+  }
 
-    @Override
-    protected void onHandleIntent(Intent intent) {
-        Timber.d("Handling Notification intent for StopCaptureEvent");
-        bus.post(new StopCaptureEvent());
-    }
+  @Override
+  protected void onHandleIntent(Intent intent) {
+    Timber.d("Handling Notification intent for StopCaptureEvent");
+    bus.post(new StopCaptureEvent());
+  }
 }

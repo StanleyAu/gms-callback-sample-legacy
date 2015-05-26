@@ -1,51 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="Genesys Sample Settings" >
-        <EditTextPreference
-            android:id="@+id/property_host"
-            android:inputType="textNoSuggestions"
-            android:defaultValue="localhost"
-            android:key="@string/key_property_host"
-            android:singleLine="true"
-            android:title="@string/title_property_host" />
-        <EditTextPreference
-            android:id="@+id/property_port"
-            android:inputType="number"
-            android:defaultValue="8080"
-            android:key="@string/key_property_port"
-            android:singleLine="true"
-            android:title="@string/title_property_port" />
-        <EditTextPreference
-            android:id="@+id/property_api_version"
-            android:inputType="number"
-            android:defaultValue="1"
-            android:key="@string/key_property_api_version"
-            android:singleLine="true"
-            android:title="@string/title_property_api_version" />
-        <EditTextPreference
-            android:defaultValue="gmstester-callback"
-            android:inputType="textNoSuggestions"
-            android:key="service_name"
-            android:singleLine="true"
-            android:title="Service name" />
-        <SwitchPreference
-            android:defaultValue="false"
-            android:key="provide_code"
-            android:title="Request code" />
-        <EditTextPreference
-            android:defaultValue=""
-            android:inputType="phone"
-            android:key="this_phone_number"
-            android:singleLine="true"
-            android:title="My phone number" />
-        <SwitchPreference
-            android:defaultValue="true"
-            android:key="push_notifications_enabled"
-            android:title="Push notifications" />
-        <EditTextPreference
-            android:defaultValue=""
-            android:inputType="textUri"
-            android:key="new_gcm_sender_id"
-            android:singleLine="true"
-            android:title="GCM sender id" />
+    android:title="Genesys Sample Settings">
+    <EditTextPreference
+        android:id="@+id/property_host"
+        android:inputType="textNoSuggestions"
+        android:defaultValue="localhost"
+        android:key="@string/key_property_host"
+        android:singleLine="true"
+        android:title="@string/title_property_host" />
+    <EditTextPreference
+        android:id="@+id/property_port"
+        android:inputType="number"
+        android:defaultValue="8080"
+        android:key="@string/key_property_port"
+        android:singleLine="true"
+        android:title="@string/title_property_port" />
+    <EditTextPreference
+        android:id="@+id/property_api_version"
+        android:inputType="number"
+        android:defaultValue="1"
+        android:key="@string/key_property_api_version"
+        android:singleLine="true"
+        android:title="@string/title_property_api_version" />
+    <EditTextPreference
+        android:defaultValue="gmstester-callback"
+        android:inputType="textNoSuggestions"
+        android:key="service_name"
+        android:singleLine="true"
+        android:title="Service name" />
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="provide_code"
+        android:title="Request code" />
+    <EditTextPreference
+        android:defaultValue=""
+        android:inputType="phone"
+        android:key="this_phone_number"
+        android:singleLine="true"
+        android:title="My phone number" />
+    <SwitchPreference
+        android:defaultValue="true"
+        android:key="push_notifications_enabled"
+        android:title="Push notifications" />
+    <EditTextPreference
+        android:defaultValue=""
+        android:inputType="textUri"
+        android:key="new_gcm_sender_id"
+        android:singleLine="true"
+        android:title="GCM sender id" />
 </PreferenceScreen>

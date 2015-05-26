@@ -17,63 +17,63 @@ import java.util.Map;
  * Created by stau on 2/6/2015.
  */
 public class TranscriptEntryTypeAdapter extends TypeAdapter<TranscriptEntry> {
-    private final Map<String, ChatEvent> nameToConstant = new HashMap<String, ChatEvent>();
-    private final Map<ChatEvent, String> constantToName = new HashMap<ChatEvent, String>();
+  private final Map<String, ChatEvent> nameToConstant = new HashMap<String, ChatEvent>();
+  private final Map<ChatEvent, String> constantToName = new HashMap<ChatEvent, String>();
 
-    public TranscriptEntryTypeAdapter() {
-        super();
-        for(ChatEvent chatEvent : ChatEvent.class.getEnumConstants()) {
-            try {
-                String name = chatEvent.name();
-                SerializedName annotation = ChatEvent.class.getField(name).getAnnotation(SerializedName.class);
-                if(annotation != null) {
-                    name = annotation.value();
-                }
-                nameToConstant.put(name, chatEvent);
-                constantToName.put(chatEvent, name);
-            }catch(NoSuchFieldException e) {
-                throw new AssertionError();
-            }
+  public TranscriptEntryTypeAdapter() {
+    super();
+    for (ChatEvent chatEvent : ChatEvent.class.getEnumConstants()) {
+      try {
+        String name = chatEvent.name();
+        SerializedName annotation = ChatEvent.class.getField(name).getAnnotation(SerializedName.class);
+        if (annotation != null) {
+          name = annotation.value();
         }
+        nameToConstant.put(name, chatEvent);
+        constantToName.put(chatEvent, name);
+      } catch (NoSuchFieldException e) {
+        throw new AssertionError();
+      }
     }
+  }
 
-    @Override
-    public void write(JsonWriter out, TranscriptEntry value) throws IOException {
-        if(value == null){
-            out.nullValue();
-            return;
-        }
-        out.beginArray();
-        ChatEvent chatEvent = value.getChatEvent();
-        out.value(chatEvent == null ? null : constantToName.get(chatEvent));
-        out.value(value.getNickname());
-        out.value(value.getText());
-        out.value(value.getPartyId());
-        out.value(value.getChatPartyType().name());
-        out.endArray();
+  @Override
+  public void write(JsonWriter out, TranscriptEntry value) throws IOException {
+    if (value == null) {
+      out.nullValue();
+      return;
     }
+    out.beginArray();
+    ChatEvent chatEvent = value.getChatEvent();
+    out.value(chatEvent == null ? null : constantToName.get(chatEvent));
+    out.value(value.getNickname());
+    out.value(value.getText());
+    out.value(value.getPartyId());
+    out.value(value.getChatPartyType().name());
+    out.endArray();
+  }
 
-    @Override
-    public TranscriptEntry read(JsonReader in) throws IOException {
-        ChatEvent event = null;
-        String nickname = null;
-        String text = null;
-        String partyId = null;
-        ChatPartyType partyType = null;
+  @Override
+  public TranscriptEntry read(JsonReader in) throws IOException {
+    ChatEvent event = null;
+    String nickname = null;
+    String text = null;
+    String partyId = null;
+    ChatPartyType partyType = null;
 
-        if(in.peek() == JsonToken.NULL) {
-            in.nextNull();
-            return null;
-        }
-        in.beginArray();
-        String strEvent = in.nextString();
-        event = nameToConstant.get(strEvent);
-        nickname = in.nextString();
-        text = in.nextString();
-        partyId = in.nextString();
-        partyType = ChatPartyType.valueOf(in.nextString());
-        in.endArray();
-
-        return new TranscriptEntry(event, nickname, text, partyId, partyType);
+    if (in.peek() == JsonToken.NULL) {
+      in.nextNull();
+      return null;
     }
+    in.beginArray();
+    String strEvent = in.nextString();
+    event = nameToConstant.get(strEvent);
+    nickname = in.nextString();
+    text = in.nextString();
+    partyId = in.nextString();
+    partyType = ChatPartyType.valueOf(in.nextString());
+    in.endArray();
+
+    return new TranscriptEntry(event, nickname, text, partyId, partyType);
+  }
 }

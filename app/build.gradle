@@ -22,11 +22,11 @@ def versionBuild = 0
 def version_Code = 0
 def versionPropsFile = file('version.properties')
 def Properties versionProps = new Properties()
-if(versionPropsFile.canRead()) {
+if (versionPropsFile.canRead()) {
     versionProps.load(new FileInputStream(versionPropsFile))
     def value = 0
     def runTasks = gradle.startParameter.taskNames
-    if('assemble' in runTasks || 'assembleRelease' in runTasks || 'aR' in runTasks) {
+    if ('assemble' in runTasks || 'assembleRelease' in runTasks || 'aR' in runTasks) {
         value = 1
     }
 
@@ -37,7 +37,7 @@ if(versionPropsFile.canRead()) {
 } else {
     throw new GradleException("Could not read version.properties!")
 }
-if(versionPropsFile.canWrite()) {
+if (versionPropsFile.canWrite()) {
     versionProps['VERSION_PATCH'] = versionPatch.toString()
     versionProps['VERSION_BUILD'] = versionBuild.toString()
     versionProps['VERSION_CODE'] = version_Code.toString()

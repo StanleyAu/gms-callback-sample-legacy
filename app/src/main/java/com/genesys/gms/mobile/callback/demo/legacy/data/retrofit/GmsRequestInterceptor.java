@@ -11,29 +11,29 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class GmsRequestInterceptor implements RequestInterceptor {
-    private static final String GMS_USER = "gms_user";
-    private String gmsUser;
+  private static final String GMS_USER = "gms_user";
+  private String gmsUser;
 
-    @DebugLog
-    public GmsRequestInterceptor() {
-        super();
-    }
+  @DebugLog
+  public GmsRequestInterceptor() {
+    super();
+  }
 
-    public String getGmsUser() {
-        return gmsUser;
-    }
+  public String getGmsUser() {
+    return gmsUser;
+  }
 
-    public void setGmsUser(String newUser) {
-        Log.d("GmsRequestInterceptor", "Setting gms_user: " + newUser);
-        this.gmsUser = newUser;
-    }
+  public void setGmsUser(String newUser) {
+    Log.d("GmsRequestInterceptor", "Setting gms_user: " + newUser);
+    this.gmsUser = newUser;
+  }
 
-    @Override
-    public void intercept(RequestFacade request) {
-        Log.d("GmsRequestInterceptor", "Inserting gms_user: " + gmsUser + " header.");
-        if(gmsUser == null || gmsUser.isEmpty()) {
-            return;
-        }
-        request.addHeader(GMS_USER, gmsUser);
+  @Override
+  public void intercept(RequestFacade request) {
+    Log.d("GmsRequestInterceptor", "Inserting gms_user: " + gmsUser + " header.");
+    if (gmsUser == null || gmsUser.isEmpty()) {
+      return;
     }
+    request.addHeader(GMS_USER, gmsUser);
+  }
 }

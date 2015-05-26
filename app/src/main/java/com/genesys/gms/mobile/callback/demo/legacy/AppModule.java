@@ -26,39 +26,47 @@ import javax.inject.Singleton;
     library = true
 )
 public class AppModule {
-    private final App application;
-    public AppModule(App application) {
-        this.application = application;
-    }
+  private final App application;
 
-    @Provides @Singleton
-    GoogleCloudMessaging provideGoogleCloudMessaging(@ForApplication Context context) {
-        return GoogleCloudMessaging.getInstance(context);
-    }
+  public AppModule(App application) {
+    this.application = application;
+  }
 
-    @Provides @Singleton
-    WindowManager provideWindowManager(@ForApplication Context context) {
-        return (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
-    }
+  @Provides
+  @Singleton
+  GoogleCloudMessaging provideGoogleCloudMessaging(@ForApplication Context context) {
+    return GoogleCloudMessaging.getInstance(context);
+  }
 
-    @Provides @Singleton
-    NotificationManagerCompat provideNotificationManagerCompat(@ForApplication Context context) {
-        return NotificationManagerCompat.from(context);
-    }
+  @Provides
+  @Singleton
+  WindowManager provideWindowManager(@ForApplication Context context) {
+    return (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+  }
 
-    @SuppressWarnings("ResourceType")
-    @Provides @Singleton
-    MediaProjectionManager provideMediaProjectionManager(@ForApplication Context context) {
-        return (MediaProjectionManager)context.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-    }
+  @Provides
+  @Singleton
+  NotificationManagerCompat provideNotificationManagerCompat(@ForApplication Context context) {
+    return NotificationManagerCompat.from(context);
+  }
 
-    @Provides @Singleton @ForApplication
-    Context provideApplicationContext() {
-        return application;
-    }
+  @SuppressWarnings("ResourceType")
+  @Provides
+  @Singleton
+  MediaProjectionManager provideMediaProjectionManager(@ForApplication Context context) {
+    return (MediaProjectionManager) context.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+  }
 
-    @Provides @Singleton
-    Application provideApplication() {
-        return application;
-    }
+  @Provides
+  @Singleton
+  @ForApplication
+  Context provideApplicationContext() {
+    return application;
+  }
+
+  @Provides
+  @Singleton
+  Application provideApplication() {
+    return application;
+  }
 }

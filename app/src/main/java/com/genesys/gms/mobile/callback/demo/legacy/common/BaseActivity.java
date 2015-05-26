@@ -13,27 +13,27 @@ import java.util.List;
  * Created by stau on 11/27/2014.
  */
 public class BaseActivity extends ActionBarActivity {
-    private ObjectGraph activityGraph;
+  private ObjectGraph activityGraph;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        App application = (App)getApplication();
-        activityGraph = application.getApplicationGraph().plus(getModules().toArray());
-        activityGraph.inject(this);
-    }
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    App application = (App) getApplication();
+    activityGraph = application.getApplicationGraph().plus(getModules().toArray());
+    activityGraph.inject(this);
+  }
 
-    @Override
-    protected void onDestroy() {
-        activityGraph = null;
-        super.onDestroy();
-    }
+  @Override
+  protected void onDestroy() {
+    activityGraph = null;
+    super.onDestroy();
+  }
 
-    protected List<Object> getModules() {
-        return Arrays.<Object>asList(new UiModule(this));
-    }
+  protected List<Object> getModules() {
+    return Arrays.<Object>asList(new UiModule(this));
+  }
 
-    public void inject(Object object) {
-        activityGraph.inject(object);
-    }
+  public void inject(Object object) {
+    activityGraph.inject(object);
+  }
 }

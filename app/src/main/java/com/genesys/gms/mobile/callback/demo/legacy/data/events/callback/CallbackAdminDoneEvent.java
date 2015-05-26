@@ -9,16 +9,17 @@ import java.util.Map;
  * Created by stau on 2/3/2015.
  */
 public class CallbackAdminDoneEvent {
-    public final Map<String, List<CallbackAdminRequest>> callbackServices;
+  public final Map<String, List<CallbackAdminRequest>> callbackServices;
 
-    public CallbackAdminDoneEvent(Map<String, List<CallbackAdminRequest>> callbackServices) {
-        this.callbackServices = callbackServices;
-    }
+  public CallbackAdminDoneEvent(Map<String, List<CallbackAdminRequest>> callbackServices) {
+    this.callbackServices = callbackServices;
+  }
 
-    @Override public String toString() {
-        return getClass().getName() + "@" + hashCode() +
-            "[" +
-            "callbackServices=" + callbackServices +
-            "]";
-    }
+  @Override
+  public String toString() {
+    return getClass().getName() + "@" + hashCode() +
+        "[" +
+        "callbackServices=" + callbackServices +
+        "]";
+  }
 }

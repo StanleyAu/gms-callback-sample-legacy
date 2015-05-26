@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<RelativeLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center_vertical"
     android:padding="16dp">
+
     <LinearLayout
         android:id="@+id/version_row"
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <TextView
             android:id="@+id/txt_label_version"
             android:layout_width="0dp"
@@ -19,8 +20,8 @@
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
             android:gravity="end"
-            android:text="@string/label_version_number"
-            />
+            android:text="@string/label_version_number" />
+
         <TextView
             android:id="@+id/txt_value_version"
             android:layout_width="0dp"
@@ -28,14 +29,15 @@
             android:layout_weight="2"
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
-            android:gravity="start"
-            />
+            android:gravity="start" />
     </LinearLayout>
+
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/version_row">
+
         <TextView
             android:id="@+id/txt_label_date"
             android:layout_width="0dp"
@@ -44,8 +46,8 @@
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
             android:gravity="end"
-            android:text="@string/label_build_date"
-            />
+            android:text="@string/label_build_date" />
+
         <TextView
             android:id="@+id/txt_value_date"
             android:layout_width="0dp"
@@ -53,7 +55,6 @@
             android:layout_weight="2"
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
-            android:gravity="start"
-            />
+            android:gravity="start" />
     </LinearLayout>
 </RelativeLayout>

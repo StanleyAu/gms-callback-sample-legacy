@@ -4,51 +4,52 @@ package com.genesys.gms.mobile.callback.demo.legacy.data.api.pojo;
  * Created by stau on 2/6/2015.
  */
 public class TranscriptEntry {
-    private final ChatEvent chatEvent;
-    private final String nickname;
-    private final String text;
-    private final String partyId;
-    private final ChatPartyType chatPartyType;
+  private final ChatEvent chatEvent;
+  private final String nickname;
+  private final String text;
+  private final String partyId;
+  private final ChatPartyType chatPartyType;
 
-    public TranscriptEntry(ChatEvent chatEvent,
-                           String nickname,
-                           String text,
-                           String partyId,
-                           ChatPartyType chatPartyType) {
-        this.chatEvent = chatEvent;
-        this.nickname = nickname;
-        this.text = text;
-        this.partyId = partyId;
-        this.chatPartyType = chatPartyType;
-    }
+  public TranscriptEntry(ChatEvent chatEvent,
+                         String nickname,
+                         String text,
+                         String partyId,
+                         ChatPartyType chatPartyType) {
+    this.chatEvent = chatEvent;
+    this.nickname = nickname;
+    this.text = text;
+    this.partyId = partyId;
+    this.chatPartyType = chatPartyType;
+  }
 
-    public ChatEvent getChatEvent() {
-        return chatEvent;
-    }
+  public ChatEvent getChatEvent() {
+    return chatEvent;
+  }
 
-    public String getNickname() {
-        return nickname;
-    }
+  public String getNickname() {
+    return nickname;
+  }
 
-    public String getText() {
-        return text;
-    }
+  public String getText() {
+    return text;
+  }
 
-    public String getPartyId() {
-        return partyId;
-    }
+  public String getPartyId() {
+    return partyId;
+  }
 
-    public ChatPartyType getChatPartyType() {
-        return chatPartyType;
-    }
+  public ChatPartyType getChatPartyType() {
+    return chatPartyType;
+  }
 
-    @Override public String toString() {
-        return getClass().getName() + "@" + hashCode() +
-            "[" +
-            "chatEvent=" + chatEvent +
-            ",nickname=" + nickname +
-            ",text=" + text +
-            ",partyId=" + partyId +
-            "]";
-    }
+  @Override
+  public String toString() {
+    return getClass().getName() + "@" + hashCode() +
+        "[" +
+        "chatEvent=" + chatEvent +
+        ",nickname=" + nickname +
+        ",text=" + text +
+        ",partyId=" + partyId +
+        "]";
+  }
 }

@@ -24,14 +24,16 @@ import javax.inject.Singleton;
     library = true
 )
 public class UiModule {
-    private final BaseActivity activity;
+  private final BaseActivity activity;
 
-    public UiModule(BaseActivity activity) {
-        this.activity = activity;
-    }
+  public UiModule(BaseActivity activity) {
+    this.activity = activity;
+  }
 
-    @Provides @Singleton @ForActivity
-    Context provideActivityContext() {
-        return activity;
-    }
+  @Provides
+  @Singleton
+  @ForActivity
+  Context provideActivityContext() {
+    return activity;
+  }
 }

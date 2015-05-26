@@ -19,14 +19,16 @@ import javax.inject.Singleton;
     library = true
 )
 public class CaptureModule {
-    private final CaptureService captureService;
-    public CaptureModule(CaptureService captureService) {
-        this.captureService = captureService;
-    }
-    @Provides
-    @Singleton
-    @ForService
-    Context provideCaptureServiceContext() {
-        return captureService;
-    }
+  private final CaptureService captureService;
+
+  public CaptureModule(CaptureService captureService) {
+    this.captureService = captureService;
+  }
+
+  @Provides
+  @Singleton
+  @ForService
+  Context provideCaptureServiceContext() {
+    return captureService;
+  }
 }

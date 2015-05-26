@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="Genesys Callback" >
+    android:title="Genesys Callback">
 
     <EditTextPreference
         android:key="first_name"
@@ -33,19 +33,19 @@
         android:dialogTitle="Choose scenario"
         android:entries="@array/scenarios"
         android:entryValues="@array/scenarios"
-        android:defaultValue="VOICE-WAIT-USERORIG"/>
+        android:defaultValue="VOICE-WAIT-USERORIG" />
     <com.genesys.gms.mobile.callback.demo.legacy.widgets.DateTimePreference
         android:key="desired_time"
         android:title="Desired time"
         android:dialogTitle="Select a time"
         android:summary="Tap to select"
-        android:enabled="false"/>
+        android:enabled="false" />
     <ListPreference
         android:key="selected_time"
         android:title="Available time slots"
         android:entries="@array/empty"
-       	android:entryValues="@array/empty"
+        android:entryValues="@array/empty"
         android:dialogTitle="Choose time slot"
         android:summary="Select desired time above"
-        android:enabled="false"/>
+        android:enabled="false" />
 </PreferenceScreen>

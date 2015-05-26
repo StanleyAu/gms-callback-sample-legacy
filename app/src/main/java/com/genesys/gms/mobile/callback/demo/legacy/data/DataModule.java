@@ -36,69 +36,74 @@ import java.io.IOException;
     library = true
 )
 public class DataModule {
-    static final int DISK_CACHE_SIZE = 50 * 1024 * 1024; // 50MB
-    static final String UTC_DATE_FORMAT = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'SSS'Z'";
+  static final int DISK_CACHE_SIZE = 50 * 1024 * 1024; // 50MB
+  static final String UTC_DATE_FORMAT = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'SSS'Z'";
 
-    @Provides @Singleton
-    OkHttpClient provideOkHttpClient(Application app) {
-        return createOkHttpClient(app);
+  @Provides
+  @Singleton
+  OkHttpClient provideOkHttpClient(Application app) {
+    return createOkHttpClient(app);
+  }
+
+  @Provides
+  @Singleton
+  HttpClient provideJettyHttpClient() {
+    return createJettyHttpClient();
+  }
+
+  @Provides
+  @Singleton
+  DateTimeFormatter provideDateTimeFormatter() {
+    return DateTimeFormat.forPattern(UTC_DATE_FORMAT).withZoneUTC();
+  }
+
+  @Provides
+  @Singleton
+  Gson provideGson() {
+    return new GsonBuilder()
+        .setFieldNamingPolicy(FieldNamingPolicy.IDENTITY)
+        .setDateFormat(UTC_DATE_FORMAT)
+        .registerTypeAdapter(DateTime.class, new DateTimeTypeAdapter())
+        .registerTypeAdapter(TranscriptEntry.class, new TranscriptEntryTypeAdapter())
+        .setPrettyPrinting()
+        .create();
+  }
+
+  @Provides
+  @Singleton
+  SharedPreferences provideSharedPreferences(@ForApplication Context context) {
+    return PreferenceManager.getDefaultSharedPreferences(context);
+  }
+
+  static OkHttpClient createOkHttpClient(Application app) {
+    OkHttpClient client = new OkHttpClient();
+
+    // Install an HTTP cache in the application cache directory.
+    try {
+      File cacheDir = new File(app.getCacheDir(), "http");
+      Cache cache = new Cache(cacheDir, DISK_CACHE_SIZE);
+      client.setCache(cache);
+    } catch (IOException e) {
+      //Timber.e(e, "Unable to install disk cache.");
     }
 
-    @Provides @Singleton
-    HttpClient provideJettyHttpClient() {
-        return createJettyHttpClient();
+    return client;
+  }
+
+  static HttpClient createJettyHttpClient() {
+    HttpClient httpClient = new HttpClient();
+    httpClient.setConnectTimeout(Globals.CONNECT_TIMEOUT);
+    QueuedThreadPool threadPool = new QueuedThreadPool();
+    threadPool.setMinThreads(3);
+    threadPool.setMaxThreads(3); // minimum required is 3
+    threadPool.setDaemon(true);
+    threadPool.setName("JettyHttpClient");
+    httpClient.setThreadPool(threadPool);
+    try {
+      httpClient.start();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
-
-    @Provides @Singleton
-    DateTimeFormatter provideDateTimeFormatter() {
-        return DateTimeFormat.forPattern(UTC_DATE_FORMAT).withZoneUTC();
-    }
-
-    @Provides @Singleton
-    Gson provideGson() {
-        return new GsonBuilder()
-            .setFieldNamingPolicy(FieldNamingPolicy.IDENTITY)
-            .setDateFormat(UTC_DATE_FORMAT)
-            .registerTypeAdapter(DateTime.class, new DateTimeTypeAdapter())
-            .registerTypeAdapter(TranscriptEntry.class, new TranscriptEntryTypeAdapter())
-            .setPrettyPrinting()
-            .create();
-    }
-
-    @Provides @Singleton
-    SharedPreferences provideSharedPreferences(@ForApplication Context context) {
-        return PreferenceManager.getDefaultSharedPreferences(context);
-    }
-
-    static OkHttpClient createOkHttpClient(Application app) {
-        OkHttpClient client = new OkHttpClient();
-
-        // Install an HTTP cache in the application cache directory.
-        try {
-            File cacheDir = new File(app.getCacheDir(), "http");
-            Cache cache = new Cache(cacheDir, DISK_CACHE_SIZE);
-            client.setCache(cache);
-        } catch (IOException e) {
-            //Timber.e(e, "Unable to install disk cache.");
-        }
-
-        return client;
-    }
-
-    static HttpClient createJettyHttpClient() {
-        HttpClient httpClient = new HttpClient();
-        httpClient.setConnectTimeout(Globals.CONNECT_TIMEOUT);
-        QueuedThreadPool threadPool = new QueuedThreadPool();
-        threadPool.setMinThreads(3);
-        threadPool.setMaxThreads(3); // minimum required is 3
-        threadPool.setDaemon(true);
-        threadPool.setName("JettyHttpClient");
-        httpClient.setThreadPool(threadPool);
-        try {
-            httpClient.start();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return httpClient;
-    }
+    return httpClient;
+  }
 }

@@ -8,16 +8,17 @@ import java.util.Map;
  * Created by stau on 2/3/2015.
  */
 public class CallbackAvailabilityDoneEvent {
-    public final Map<DateTime, Integer> availability;
+  public final Map<DateTime, Integer> availability;
 
-    public CallbackAvailabilityDoneEvent(Map<DateTime, Integer> availability) {
-        this.availability = availability;
-    }
+  public CallbackAvailabilityDoneEvent(Map<DateTime, Integer> availability) {
+    this.availability = availability;
+  }
 
-    @Override public String toString() {
-        return getClass().getName() + "@" + hashCode() +
-            "[" +
-            "availability=" + availability +
-            "]";
-    }
+  @Override
+  public String toString() {
+    return getClass().getName() + "@" + hashCode() +
+        "[" +
+        "availability=" + availability +
+        "]";
+  }
 }

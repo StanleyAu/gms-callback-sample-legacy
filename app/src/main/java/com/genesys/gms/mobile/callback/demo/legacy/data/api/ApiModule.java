@@ -25,66 +25,72 @@ import javax.inject.Singleton;
     library = true
 )
 public class ApiModule {
-    @Provides @Singleton
-    GmsEndpoint provideEndpoint(SharedPreferences sharedPreferences) {
-        GmsEndpoint gmsEndpoint = new GmsEndpoint();
-        String host = sharedPreferences.getString(Globals.PROPERTY_HOST, "localhost");
-        String strPort = sharedPreferences.getString(Globals.PROPERTY_PORT, "8080");
-        String strApiVersion = sharedPreferences.getString(Globals.PROPERTY_API_VERSION, "1");
-        if(!host.isEmpty() && !strPort.isEmpty() && !strApiVersion.isEmpty()) {
-            Integer port = null;
-            Integer apiVersion = null;
-            try {
-                port = Integer.valueOf(strPort);
-                apiVersion = Integer.valueOf(strApiVersion);
-            } catch (NumberFormatException e) {
-                ;
+  @Provides
+  @Singleton
+  GmsEndpoint provideEndpoint(SharedPreferences sharedPreferences) {
+    GmsEndpoint gmsEndpoint = new GmsEndpoint();
+    String host = sharedPreferences.getString(Globals.PROPERTY_HOST, "localhost");
+    String strPort = sharedPreferences.getString(Globals.PROPERTY_PORT, "8080");
+    String strApiVersion = sharedPreferences.getString(Globals.PROPERTY_API_VERSION, "1");
+    if (!host.isEmpty() && !strPort.isEmpty() && !strApiVersion.isEmpty()) {
+      Integer port = null;
+      Integer apiVersion = null;
+      try {
+        port = Integer.valueOf(strPort);
+        apiVersion = Integer.valueOf(strApiVersion);
+      } catch (NumberFormatException e) {
+        ;
+      }
+      gmsEndpoint.setUrl(host, port, apiVersion);
+    }
+    return gmsEndpoint;
+  }
+
+  @Provides
+  @Singleton
+  GmsRequestInterceptor provideRequestInterceptor(SharedPreferences sharedPreferences) {
+    GmsRequestInterceptor gmsRequestInterceptor = new GmsRequestInterceptor();
+    String gmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
+    gmsRequestInterceptor.setGmsUser(gmsUser);
+    return gmsRequestInterceptor;
+  }
+
+  @Provides
+  @Singleton
+  Client provideClient(OkHttpClient client) {
+    return new OkClient(client);
+  }
+
+  @Provides
+  @Singleton
+  RestAdapter provideRestAdapter(GmsEndpoint endpoint, GmsRequestInterceptor requestInterceptor, Client client, Gson gson) {
+    RestAdapter.Builder builder = new RestAdapter.Builder()
+        .setClient(client)
+        .setEndpoint(endpoint)
+        .setRequestInterceptor(requestInterceptor)
+        .setConverter(new GsonConverter(gson));
+    if (BuildConfig.DEBUG) {
+      builder.setLogLevel(RestAdapter.LogLevel.FULL)
+          .setLog(new RestAdapter.Log() {
+            @Override
+            public void log(String msg) {
+              Timber.tag("Retrofit");
+              Timber.d(msg);
             }
-            gmsEndpoint.setUrl(host, port, apiVersion);
-        }
-        return gmsEndpoint;
+          });
     }
+    return builder.build();
+  }
 
-    @Provides @Singleton
-    GmsRequestInterceptor provideRequestInterceptor(SharedPreferences sharedPreferences) {
-        GmsRequestInterceptor gmsRequestInterceptor = new GmsRequestInterceptor();
-        String gmsUser = sharedPreferences.getString(Globals.PROPERTY_GMS_USER, null);
-        gmsRequestInterceptor.setGmsUser(gmsUser);
-        return gmsRequestInterceptor;
-    }
+  @Provides
+  @Singleton
+  CallbackApi provideCallbackService(RestAdapter restAdapter) {
+    return restAdapter.create(CallbackApi.class);
+  }
 
-    @Provides @Singleton
-    Client provideClient(OkHttpClient client) {
-        return new OkClient(client);
-    }
-
-    @Provides @Singleton
-    RestAdapter provideRestAdapter(GmsEndpoint endpoint, GmsRequestInterceptor requestInterceptor, Client client, Gson gson) {
-        RestAdapter.Builder builder = new RestAdapter.Builder()
-            .setClient(client)
-            .setEndpoint(endpoint)
-            .setRequestInterceptor(requestInterceptor)
-            .setConverter(new GsonConverter(gson));
-        if(BuildConfig.DEBUG) {
-            builder.setLogLevel(RestAdapter.LogLevel.FULL)
-                .setLog(new RestAdapter.Log() {
-                    @Override
-                    public void log(String msg) {
-                        Timber.tag("Retrofit");
-                        Timber.d(msg);
-                    }
-                });
-        }
-        return builder.build();
-    }
-
-    @Provides @Singleton
-    CallbackApi provideCallbackService(RestAdapter restAdapter) {
-        return restAdapter.create(CallbackApi.class);
-    }
-
-    @Provides @Singleton
-    ChatApi provideChatService(RestAdapter restAdapter) {
-        return restAdapter.create(ChatApi.class);
-    }
+  @Provides
+  @Singleton
+  ChatApi provideChatService(RestAdapter restAdapter) {
+    return restAdapter.create(ChatApi.class);
+  }
 }

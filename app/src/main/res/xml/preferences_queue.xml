@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="Genesys Sample Settings" >
-        <Preference
-            android:key="queue_position"
-            android:title="Last known position in queue" />
-        <Preference
-            android:key="queue_eta"
-            android:title="Last known estimated time to answer" />
-        <Preference
-            android:key="queue_agent_ready_threshold_passed"
-            android:title="'Agent ready' threshold passed" />
-        <Preference
-            android:key="queue_waiting"
-            android:title="Number waiting" />
+    android:title="Genesys Sample Settings">
+    <Preference
+        android:key="queue_position"
+        android:title="Last known position in queue" />
+    <Preference
+        android:key="queue_eta"
+        android:title="Last known estimated time to answer" />
+    <Preference
+        android:key="queue_agent_ready_threshold_passed"
+        android:title="'Agent ready' threshold passed" />
+    <Preference
+        android:key="queue_waiting"
+        android:title="Number waiting" />
 </PreferenceScreen>

@@ -13,39 +13,39 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class GmsEndpoint implements Endpoint {
-    private static final String ENDPOINT_HOST = "endpoint_host";
-    private static final String ENDPOINT_PORT = "endpoint_port";
-    private static final String ENDPOINT_API_VERSION = "endpoint_api_version";
-    private String m_strUrl;
+  private static final String ENDPOINT_HOST = "endpoint_host";
+  private static final String ENDPOINT_PORT = "endpoint_port";
+  private static final String ENDPOINT_API_VERSION = "endpoint_api_version";
+  private String m_strUrl;
 
-    @DebugLog
-    public GmsEndpoint() {
-        super();
-    }
+  @DebugLog
+  public GmsEndpoint() {
+    super();
+  }
 
-    @Override
-    public String getName() {
-        return "default";
-    }
+  @Override
+  public String getName() {
+    return "default";
+  }
 
-    @DebugLog
-    public void setUrl(String p_strHost, Integer p_nPort, Integer p_nApiVersion) {
-        if(p_strHost == null || p_strHost.isEmpty() || p_nPort == null || p_nApiVersion == null) {
-            m_strUrl = null;
-        } else {
-            m_strUrl = String.format("http://%s:%d/genesys/%d", p_strHost, p_nPort, p_nApiVersion);
-        }
-        Log.d("GmsEndpoint", "Endpoint URL: " + m_strUrl);
-        //Timber.d("Endpoint URL: ", m_strUrl);
+  @DebugLog
+  public void setUrl(String p_strHost, Integer p_nPort, Integer p_nApiVersion) {
+    if (p_strHost == null || p_strHost.isEmpty() || p_nPort == null || p_nApiVersion == null) {
+      m_strUrl = null;
+    } else {
+      m_strUrl = String.format("http://%s:%d/genesys/%d", p_strHost, p_nPort, p_nApiVersion);
     }
+    Log.d("GmsEndpoint", "Endpoint URL: " + m_strUrl);
+    //Timber.d("Endpoint URL: ", m_strUrl);
+  }
 
-    public boolean isUrlSet() {
-        return m_strUrl != null;
-    }
+  public boolean isUrlSet() {
+    return m_strUrl != null;
+  }
 
-    @Override
-    public String getUrl() {
-        if (m_strUrl == null) throw new IllegalStateException("setUrl() has not been called");
-        return m_strUrl;
-    }
+  @Override
+  public String getUrl() {
+    if (m_strUrl == null) throw new IllegalStateException("setUrl() has not been called");
+    return m_strUrl;
+  }
 }

@@ -8,7 +8,9 @@ import org.cometd.bayeux.client.ClientSessionChannel;
  * Used in conjunction with {@link com.genesys.gms.mobile.callback.demo.legacy.client.CometClient}
  */
 public interface CometHandler {
-    public void onConnect();
-    public void onDisconnect();
-    public void onMessage(ClientSessionChannel channel, Message message);
+  public void onConnect();
+
+  public void onDisconnect();
+
+  public void onMessage(ClientSessionChannel channel, Message message);
 }
