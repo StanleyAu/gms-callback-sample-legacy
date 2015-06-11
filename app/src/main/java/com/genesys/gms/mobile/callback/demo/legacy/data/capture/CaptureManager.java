@@ -160,6 +160,7 @@ public class CaptureManager {
     );
   }
 
+  @DebugLog
   private void constructFrame() {
     DisplayInfo displayInfo = getDisplayInfo();
     mWidth = displayInfo.width / 2;
@@ -195,11 +196,22 @@ public class CaptureManager {
           @Override
           public void onStopped() {
             Timber.d("Virtual Display Stopped");
-            // mBus.post(new StopCaptureEvent());
             synchronized (mReaderLock) {
+              mImageReader.close();
+              mImageReader = null;
               if (mReconstructing) {
                 constructFrame();
                 mReconstructing = false;
+              } else {
+                if(mProjection != null) {
+                  mProjection.stop();
+                  // Defer to projection onStop callback
+                } else {
+                  mCaptureHandler = null;
+                  if (mHandlerThread.quitSafely()) {
+                    mHandlerThread = null;
+                  }
+                }
               }
             }
           }
@@ -209,13 +221,14 @@ public class CaptureManager {
     mImageReader.setOnImageAvailableListener(mImageListener, mCaptureHandler);
   }
 
+  @DebugLog
   private void deconstructFrame() {
     mDisplay.release();
     mDisplay = null;
-    mImageReader.close();
-    mImageReader = null;
+    // Wait for display to stop
   }
 
+  @DebugLog
   private void startCapture(int resultCode, Intent data) {
     synchronized (mReaderLock) {
       if (mHandlerThread != null) {
@@ -243,7 +256,15 @@ public class CaptureManager {
         public void onStop() {
           super.onStop();
           Timber.d("MediaProjection stopped.");
-          mBus.post(new StopCaptureEvent());
+          if(mDisplay == null) {
+            mProjection = null;
+            mCaptureHandler = null;
+            if (mHandlerThread.quitSafely()) {
+              mHandlerThread = null;
+            }
+          } else {
+            mBus.post(new StopCaptureEvent());
+          }
         }
       }, mCaptureHandler);
       constructFrame();
@@ -255,19 +276,16 @@ public class CaptureManager {
     }
   }
 
+  @DebugLog
   private void stopCapture() {
     synchronized (mReaderLock) {
       if (mHandlerThread == null) {
+        Timber.d("Handler thread is already dead");
         return;
       }
       mFutureTask.cancel(false);
       deconstructFrame();
-      mProjection.stop();
-      mProjection = null;
-      mCaptureHandler = null;
-      if (mHandlerThread.quit()) {
-        mHandlerThread = null;
-      }
+      // Defer to onStopped callback
     }
   }
 
@@ -294,7 +312,6 @@ public class CaptureManager {
     return response.body().string();
   }
 
-  @DebugLog
   private String uploadScreenCapture(String serviceId, File screenCapture) throws IOException {
     // TODO: Use retrofit
     mUploading = true;
@@ -409,20 +426,18 @@ public class CaptureManager {
     public void onImageAvailable(ImageReader reader) {
       try {
         Image image = null;
+        Bitmap bmp = null;
         synchronized (mReaderLock) {
-          if (reader != mImageReader || mImageReader == null) {
+          if (mImageReader == null || reader != mImageReader) {
             return;
           }
           image = reader.acquireLatestImage();
+          if (image == null) {
+            return;
+          }
+          bmp = obtainBitmap(image);
+          image.close();
         }
-        if (image == null) {
-          return;
-        }
-        Bitmap bmp = obtainBitmap(image);
-        if (bmp == null) {
-          return;
-        }
-        image.close();
         synchronized (mImageLock) {
           if (mLatestCapture != null) {
             mLatestCapture.recycle();
