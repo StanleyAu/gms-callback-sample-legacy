@@ -3,7 +3,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.1.1'
+        classpath 'com.android.tools.build:gradle:1.2.3'
         classpath 'com.jakewharton.hugo:hugo-plugin:1.1.0'
     }
 }
@@ -74,9 +74,9 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:support-v4:22.1.1'
+    compile 'com.android.support:support-v4:22.2.0'
     compile 'com.android.support:support-v13:21.0.0'
-    compile 'com.android.support:appcompat-v7:22.1.1'
+    compile 'com.android.support:appcompat-v7:22.2.0'
     compile 'com.google.android.gms:play-services-gcm:7.3.0'
     compile 'com.astuetz:pagerslidingtabstrip:1.0.1'
     compile 'com.squareup.dagger:dagger:1.2.0'
