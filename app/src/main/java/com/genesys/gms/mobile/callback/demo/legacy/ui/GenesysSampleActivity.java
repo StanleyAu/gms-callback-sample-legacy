@@ -35,6 +35,7 @@ import javax.inject.Inject;
 public class GenesysSampleActivity extends AbstractTabActivity implements OnSharedPreferenceChangeListener {
   public static final CharSequence[] EMPTY_LIST = {};
 
+  // TODO: These belong in a Controller/Presenter class
   @Inject
   SharedPreferences sharedPreferences;
   @Inject
@@ -341,6 +342,7 @@ public class GenesysSampleActivity extends AbstractTabActivity implements OnShar
       return true;
     } else if (item.getItemId() == R.id.share_screen) {
       CaptureManager.fireScreenCaptureEvent(this);
+      // TODO: Send intent to start CaptureService
     }
     return true;
   }

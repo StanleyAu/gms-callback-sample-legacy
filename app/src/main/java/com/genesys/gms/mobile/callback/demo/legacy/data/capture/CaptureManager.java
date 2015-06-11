@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
@@ -23,6 +24,7 @@ import android.view.Surface;
 import android.view.WindowManager;
 import com.genesys.gms.mobile.callback.demo.legacy.R;
 import com.genesys.gms.mobile.callback.demo.legacy.common.ForApplication;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.OrientationChangeEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.capture.StartCaptureEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.events.capture.StopCaptureEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.data.retrofit.GmsEndpoint;
@@ -59,6 +61,7 @@ public class CaptureManager {
   private ImageReader mImageReader;
   private ImageListener mImageListener;
   private HandlerThread mHandlerThread = null;
+  private Handler mCaptureHandler = null;
   private MediaProjection mProjection;
   private VirtualDisplay mDisplay;
   private ScheduledThreadPoolExecutor mExecutor;
@@ -70,6 +73,8 @@ public class CaptureManager {
   private String mAccessCode;
   private int mCounter;
   private boolean mUploading = false;
+  private boolean mIsLandscape = false;
+  private boolean mReconstructing = false;
   private final Context mContext;
   private final WindowManager mWindowManager;
   private final MediaProjectionManager mMediaProjectManager;
@@ -126,15 +131,28 @@ public class CaptureManager {
     stopCapture();
   }
 
+  public void onEventAsync(OrientationChangeEvent event) {
+    boolean isLandscape = event.orientation == Configuration.ORIENTATION_LANDSCAPE;
+    if (isLandscape == mIsLandscape) {
+      return;
+    }
+    synchronized (mReaderLock) {
+      deconstructFrame();
+      mReconstructing = true;
+      // Wait for onStopped callback
+      // constructFrame();
+    }
+  }
+
   // On start record, initialize ImageReader with screen dimensions
   private DisplayInfo getDisplayInfo() {
     DisplayMetrics displayMetrics = new DisplayMetrics();
     mWindowManager.getDefaultDisplay().getRealMetrics(displayMetrics);
-        /*
-        Configuration configuration = mContext.getResources().getConfiguration();
-        boolean isLandscape = configuration.orientation == ORIENTATION_LANDSCAPE;
-        */
-    // TODO: Screen capture dimensions/scaling configuration
+
+    Configuration configuration = mContext.getResources().getConfiguration();
+    mIsLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE;
+
+    Timber.d("(%s) Display Width: %d, Height: %d", mIsLandscape ? "LANDSCAPE" : "PORTRAIT", displayMetrics.widthPixels, displayMetrics.heightPixels);
     return new DisplayInfo(
         displayMetrics.widthPixels,
         displayMetrics.heightPixels,
@@ -143,8 +161,6 @@ public class CaptureManager {
   }
 
   private void constructFrame() {
-    Handler captureHandler = new Handler(mHandlerThread.getLooper());
-
     DisplayInfo displayInfo = getDisplayInfo();
     mWidth = displayInfo.width / 2;
     mHeight = displayInfo.height / 2;
@@ -155,6 +171,7 @@ public class CaptureManager {
         PixelFormat.RGBA_8888,
         2
     );
+
     // TODO: Restructure for handling orientation changes, e.g. easy pause/resume
     Surface surface = mImageReader.getSurface();
     mDisplay = mProjection.createVirtualDisplay(
@@ -178,19 +195,23 @@ public class CaptureManager {
           @Override
           public void onStopped() {
             Timber.d("Virtual Display Stopped");
-            mBus.post(new StopCaptureEvent());
+            // mBus.post(new StopCaptureEvent());
+            synchronized (mReaderLock) {
+              if (mReconstructing) {
+                constructFrame();
+                mReconstructing = false;
+              }
+            }
           }
         },
-        captureHandler
+        mCaptureHandler
     );
-    mImageReader.setOnImageAvailableListener(mImageListener, captureHandler);
+    mImageReader.setOnImageAvailableListener(mImageListener, mCaptureHandler);
   }
 
   private void deconstructFrame() {
     mDisplay.release();
     mDisplay = null;
-    mProjection.stop();
-    mProjection = null;
     mImageReader.close();
     mImageReader = null;
   }
@@ -214,8 +235,17 @@ public class CaptureManager {
       }
       mHandlerThread = new HandlerThread("ImageThread");
       mHandlerThread.start();
+      mCaptureHandler = new Handler(mHandlerThread.getLooper());
       // TODO: share-request errors are being ignored for development
       mProjection = mMediaProjectManager.getMediaProjection(resultCode, data);
+      mProjection.registerCallback(new MediaProjection.Callback() {
+        @Override
+        public void onStop() {
+          super.onStop();
+          Timber.d("MediaProjection stopped.");
+          mBus.post(new StopCaptureEvent());
+        }
+      }, mCaptureHandler);
       constructFrame();
       notifyScreenCapture();
       mFutureTask = mExecutor.scheduleAtFixedRate(new UploadTask(), 250, 250, TimeUnit.MILLISECONDS);
@@ -232,6 +262,9 @@ public class CaptureManager {
       }
       mFutureTask.cancel(false);
       deconstructFrame();
+      mProjection.stop();
+      mProjection = null;
+      mCaptureHandler = null;
       if (mHandlerThread.quit()) {
         mHandlerThread = null;
       }

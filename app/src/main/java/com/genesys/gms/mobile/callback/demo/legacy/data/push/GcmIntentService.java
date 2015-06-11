@@ -51,24 +51,11 @@ public class GcmIntentService extends IntentService {
   }
 
   // Dagger wiring
-  private ObjectGraph serviceGraph;
-
   @Override
   public void onCreate() {
     super.onCreate();
     App application = (App) getApplication();
-    serviceGraph = application.getApplicationGraph().plus(getModules().toArray());
-    serviceGraph.inject(this);
-  }
-
-  @Override
-  public void onDestroy() {
-    serviceGraph = null;
-    super.onDestroy();
-  }
-
-  protected List<Object> getModules() {
-    return Arrays.<Object>asList(new GcmModule(this));
+    application.getApplicationGraph().inject(this);
   }
   // End Dagger wiring
 }

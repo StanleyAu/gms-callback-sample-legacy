@@ -1,10 +1,12 @@
 package com.genesys.gms.mobile.callback.demo.legacy;
 
 import android.app.Application;
+import android.content.res.Configuration;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.CallbackApiManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.ChatApiManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.api.GcmManager;
 import com.genesys.gms.mobile.callback.demo.legacy.data.capture.CaptureManager;
+import com.genesys.gms.mobile.callback.demo.legacy.data.events.OrientationChangeEvent;
 import com.genesys.gms.mobile.callback.demo.legacy.util.LogbackFacadeTree;
 import dagger.ObjectGraph;
 import de.greenrobot.event.EventBus;
@@ -42,6 +44,19 @@ public class App extends Application {
     } else {
       // TODO: Figure out release logging
       Timber.plant(new LogbackFacadeTree(new Timber.HollowTree(), this));
+    }
+  }
+
+  @Override
+  public void onConfigurationChanged(Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    switch (newConfig.orientation) {
+      case Configuration.ORIENTATION_LANDSCAPE:
+        bus.post(new OrientationChangeEvent(Configuration.ORIENTATION_LANDSCAPE));
+        break;
+      case Configuration.ORIENTATION_PORTRAIT:
+        bus.post(new OrientationChangeEvent(Configuration.ORIENTATION_PORTRAIT));
+      default:
     }
   }
 

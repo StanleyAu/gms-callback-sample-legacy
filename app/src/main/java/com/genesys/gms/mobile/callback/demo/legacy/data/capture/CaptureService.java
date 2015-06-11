@@ -5,30 +5,30 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.IBinder;
 import com.genesys.gms.mobile.callback.demo.legacy.App;
-import dagger.ObjectGraph;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by stau on 5/26/2015.
  */
 public class CaptureService extends Service {
-  @Override
-  public void onCreate() {
-    super.onCreate();
-    dagger_onCreate();
-  }
+  private boolean isRunning = false;
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
-    return super.onStartCommand(intent, flags, startId);
+    if (isRunning) {
+      // Tells Android OS to not recreate service if it was killed to recover memory
+      return START_NOT_STICKY;
+    }
+
+    ((App) getApplication()).getApplicationGraph().inject(this);
+    // Start CaptureManager
+
+    isRunning = true;
+    return START_NOT_STICKY;
   }
 
   @Override
   public void onDestroy() {
     // clean up screen capture
-    dagger_onDestroy();
     super.onDestroy();
   }
 
@@ -36,28 +36,17 @@ public class CaptureService extends Service {
   public void onConfigurationChanged(Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     // Listen for orientation change
+    switch (newConfig.orientation) {
+      case Configuration.ORIENTATION_LANDSCAPE:
+        break;
+      case Configuration.ORIENTATION_PORTRAIT:
+        break;
+      default:
+    }
   }
 
   @Override
   public IBinder onBind(Intent intent) {
     throw new AssertionError("Not used.");
   }
-
-  // Dagger wiring
-  private ObjectGraph serviceGraph;
-
-  protected void dagger_onCreate() {
-    App application = (App) getApplication();
-    serviceGraph = application.getApplicationGraph().plus(getModules().toArray());
-    serviceGraph.inject(this);
-  }
-
-  protected void dagger_onDestroy() {
-    serviceGraph = null;
-  }
-
-  protected List<Object> getModules() {
-    return Arrays.<Object>asList(new CaptureModule(this));
-  }
-  // End Dagger wiring
 }
